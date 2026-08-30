@@ -33,7 +33,8 @@ INSERT OR IGNORE INTO devices (
 """
 
 
-if __name__ == "__main__":
+def seed_demo_data() -> None:
+    """Initialize the database and insert the demo reocrds."""
     initialize_database()
     today = date.today().isoformat()
 
@@ -77,4 +78,6 @@ if __name__ == "__main__":
                     ),
                 )
 
+if __name__ == "__main__":
+    seed_demo_data()
     print("已写入 3 台虚构演示设备和演示价格。")
