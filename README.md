@@ -22,6 +22,16 @@ python3 list_devices.py
 python3 -m examples.search_devices_demo
 ```
 
+## 运行测试
+
+安装测试依赖并运行测试：
+
+```bash
+python -m pip install -r requirements-dev.txt
+python -m pytest
+```
+
+
 ## 文件说明
 
 - `schema.sql`：定义数据库表和索引。
