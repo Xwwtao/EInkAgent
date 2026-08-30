@@ -1,26 +1,66 @@
-# EInkAgent 学习项目
+# EInkAgent
 
-目标：做一个面向电子墨水屏购买者的智能选购 Agent。
+![Tests](https://github.com/Xwwtao/EInkAgent/actions/workflows/tests.yml/badge.svg)
 
-当前包含 SQLite 数据库基础和一个可复用的条件查询工具，不需要安装第三方依赖。
+EInkAgent is a version-driven AI Agent portfolio project for helping users
+choose E Ink devices from structured specifications and offer data.
 
-## 初始化并查看数据
+The current v0.1 tool layer supports searching, inspecting, and comparing
+devices through a tested SQLite repository.
+
+> All current device and offer records are fictional demo data and must not be
+> treated as real purchasing information.
+
+## Current capabilities
+
+- `search_devices(...)` filters devices by price, brand, screen size, weight,
+  stylus support, color display, operating system, and category.
+- `get_device_detail(device_id)` returns complete device details, returns `None`
+  for an unknown device, and rejects invalid IDs.
+- `compare_devices(device_ids)` preserves input order, removes duplicate IDs,
+  and reports unknown devices.
+
+## Quick start
+
+These commands create `data/eink_devices.db`, initialize its schema, insert three fictional demo devices, and print the available records.
+
+Requires Python 3.14.
+
 
 ```bash
-python3 init_db.py
-python3 seed_demo.py
-python3 list_devices.py
+git clone https://github.com/Xwwtao/EInkAgent.git
+cd EInkAgent
+python3.14 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements-dev.txt
+python init_db.py
+python seed_demo.py
+python list_devices.py
 ```
-
-运行后会在 `data/eink_devices.db` 生成数据库文件。
-
-`seed_demo.py` 中的设备名称和参数全部是虚构的学习数据，不能作为真实购买依据。
 
 ## 条件查询工具
 
 ```bash
 python3 -m examples.search_devices_demo
 ```
+
+## Architecture
+
+```text
+Examples / future API / future Agent
+                 |
+                 v
+       device_repository.py
+      search / detail / compare
+                 |
+                 v
+            database.py
+                 |
+                 v
+       SQLite: devices + offers
+```
+
+The repository layer keeps SQL and validation separate from future API and Agent interfaces, allowing those interfaces to reuse the same tested tools.
 
 ## 运行测试
 
@@ -48,3 +88,17 @@ python -m pytest
 - `offers` 保存会变化的价格、卖家和采集时间。
 - 真实数据必须保存来源和核验时间。
 - 不知道的参数使用 `NULL`，不能让模型猜测。
+
+## Roadmap
+
+- [x] v0.1 — SQLite data model and tested device tools
+- [ ] v0.2 — FastAPI service
+- [ ] v0.3 — Structured requirement parsing with an LLM
+- [ ] v0.4 — Tool-calling Agent
+- [ ] v0.5 — RAG with citations
+- [ ] v0.6 — Memory and reliability
+- [ ] v1.0 — Portfolio release
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE).
