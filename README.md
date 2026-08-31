@@ -26,7 +26,6 @@ These commands create `data/eink_devices.db`, initialize its schema, insert thre
 
 Requires Python 3.14.
 
-
 ```bash
 git clone https://github.com/Xwwtao/EInkAgent.git
 cd EInkAgent
@@ -37,6 +36,29 @@ python init_db.py
 python seed_demo.py
 python list_devices.py
 ```
+
+## HTTP API
+
+Start the local API server:
+
+```bash
+python -m uvicorn eink_agent.api:app --reload
+```
+
+Open the interactive API documentation:
+
+- Swagger UI: http://127.0.0.1:8000/docs
+
+Example requests:
+
+```bash
+curl "http://127.0.0.1:8000/health"
+curl "http://127.0.0.1:8000/devices?brand=DemoInk&max_price=2000&limit=10"
+```
+
+The `/devices` endpoint supports the optional `brand`, `max_price`, and
+`limit` query parameters. Invalid values return an HTTP 422 validation
+response.
 
 ## 条件查询工具
 
