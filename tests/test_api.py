@@ -41,3 +41,22 @@ def test_search_devices_rejects_invalid_limit():
     response = CLIENT.get("/devices", params={"limit": 0})
 
     assert response.status_code == 422
+
+def test_get_device_detail_returns_requested_device():
+    response = CLIENT.get("/devices/1")
+
+    assert response.status_code == 200
+    device = response.json()
+    assert device["id"] == 1
+    assert device["model"] == "Reader 6"
+
+def test_get_device_detail_returns_404_for_unknown_device():
+    response = CLIENT.get("/devices/999")
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Device not found"}
+
+def test_get_device_detail_rejects_invalid_device_id():
+    response = CLIENT.get("/devices/0")
+
+    assert response.status_code == 422
