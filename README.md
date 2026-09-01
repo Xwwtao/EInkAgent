@@ -54,11 +54,15 @@ Example requests:
 ```bash
 curl "http://127.0.0.1:8000/health"
 curl "http://127.0.0.1:8000/devices?brand=DemoInk&max_price=2000&limit=10"
+curl "http://127.0.0.1:8000/devices/1"
 ```
 
 The `/devices` endpoint supports the optional `brand`, `max_price`, and
 `limit` query parameters. Invalid values return an HTTP 422 validation
 response.
+
+The `GET /devices/{device_id}` endpoint returns one device. Unknown device IDs
+return HTTP 404, while IDs smaller than 1 return HTTP 422.
 
 ## 条件查询工具
 

@@ -1,10 +1,9 @@
 """FastAPI application for EInkAgent."""
-
-from fastapi import FastAPI, Query
-
 from typing import Annotated, Any
 
-from device_repository import search_devices
+from fastapi import FastAPI, HTTPException, Path, Query
+
+from device_repository import search_devices, get_device_detail
 
 
 app = FastAPI(title="EInkAgent", version="0.2.0")
@@ -13,6 +12,7 @@ app = FastAPI(title="EInkAgent", version="0.2.0")
 def health() -> dict[str,str]:
     """Return the service health status"""
     return {"status": "ok"}
+
 
 @app.get("/devices")
 def get_devices(
@@ -26,3 +26,16 @@ def get_devices(
         max_price=max_price,
         limit=limit,
     )
+
+
+@app.get("/devices/{device_id}")
+def get_device(
+    device_id: Annotated[int, Path(ge=1)],
+) -> dict[str, Any]:
+    """Return one device by its ID."""
+    device = get_device_detail(device_id)
+
+    if device is None:
+        raise HTTPException(status_code=404, detail="Device not found")
+
+    return device
