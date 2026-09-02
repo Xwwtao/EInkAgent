@@ -55,6 +55,9 @@ Example requests:
 curl "http://127.0.0.1:8000/health"
 curl "http://127.0.0.1:8000/devices?brand=DemoInk&max_price=2000&limit=10"
 curl "http://127.0.0.1:8000/devices/1"
+curl -X POST "http://127.0.0.1:8000/devices/compare" \
+  -H "Content-Type: application/json" \
+  -d '{"device_ids": [2, 1, 2]}'
 ```
 
 The `/devices` endpoint supports the optional `brand`, `max_price`, and
@@ -63,6 +66,10 @@ response.
 
 The `GET /devices/{device_id}` endpoint returns one device. Unknown device IDs
 return HTTP 404, while IDs smaller than 1 return HTTP 422.
+
+The `POST /devices/compare` endpoint accepts two to five positive device IDs
+in a JSON request body. It preserves the input order, removes duplicate IDs,
+and returns HTTP 404 when a requested device does not exist.
 
 ## 条件查询工具
 
