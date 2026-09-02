@@ -14,6 +14,7 @@ def test_health_returns_service_status():
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
+
 def test_search_devices_supports_query_parameters():
     response = CLIENT.get(
         "/devices",
@@ -42,6 +43,7 @@ def test_search_devices_rejects_invalid_limit():
 
     assert response.status_code == 422
 
+
 def test_get_device_detail_returns_requested_device():
     response = CLIENT.get("/devices/1")
 
@@ -50,13 +52,54 @@ def test_get_device_detail_returns_requested_device():
     assert device["id"] == 1
     assert device["model"] == "Reader 6"
 
+
 def test_get_device_detail_returns_404_for_unknown_device():
     response = CLIENT.get("/devices/999")
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Device not found"}
 
+
 def test_get_device_detail_rejects_invalid_device_id():
     response = CLIENT.get("/devices/0")
+
+    assert response.status_code == 422
+
+
+def test_compare_devices_accepts_json_body():
+    response = CLIENT.post(
+        "/devices/compare",
+        json={"device_ids": [2, 1, 2]},
+    )
+
+    assert response.status_code == 200
+    devices = response.json()
+    assert [device["id"] for device in devices] == [2, 1]
+
+
+def test_compare_devices_returns_404_for_unknown_device():
+    response = CLIENT.post(
+        "/devices/compare",
+        json={"device_ids": [1, 999]},
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "设备不存在:999"}
+
+
+def test_compare_devices_rejects_non_positive_id():
+    response = CLIENT.post(
+        "/devices/compare",
+        json={"device_ids": [1, 0]},
+    )
+
+    assert response.status_code == 422
+
+
+def test_compare_devices_requires_at_least_two_ids():
+    response = CLIENT.post(
+        "/devices/compare",
+        json={"device_ids": [1]},
+    )
 
     assert response.status_code == 422

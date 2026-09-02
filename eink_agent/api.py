@@ -1,12 +1,21 @@
 """FastAPI application for EInkAgent."""
+
 from typing import Annotated, Any
 
 from fastapi import FastAPI, HTTPException, Path, Query
+from pydantic import BaseModel, Field, PositiveInt
 
-from device_repository import search_devices, get_device_detail
+from device_repository import compare_devices, get_device_detail, search_devices
+
+
+class DeviceComparisonRequest(BaseModel):
+    """Validated request body for comparing devices."""
+
+    device_ids: list[PositiveInt] = Field(min_length=2, max_length=5)
 
 
 app = FastAPI(title="EInkAgent", version="0.2.0")
+
 
 @app.get("/health")
 def health() -> dict[str,str]:
@@ -26,6 +35,17 @@ def get_devices(
         max_price=max_price,
         limit=limit,
     )
+
+
+@app.post("/devices/compare")
+def compare_device_options(
+    request: DeviceComparisonRequest,
+) -> list[dict[str, Any]]:
+    """Compare devices supplied in a JSON request body."""
+    try:
+        return compare_devices(request.device_ids)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
 
 
 @app.get("/devices/{device_id}")
