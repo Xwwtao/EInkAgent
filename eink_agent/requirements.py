@@ -2,6 +2,7 @@
 
 from pydantic import BaseModel, ConfigDict, Field
 
+
 class DeviceRequirements(BaseModel):
     """Structured search constraints for E Ink devices."""
 
