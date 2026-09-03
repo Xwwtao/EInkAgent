@@ -5,8 +5,8 @@
 EInkAgent is a version-driven AI Agent portfolio project for helping users
 choose E Ink devices from structured specifications and offer data.
 
-The current v0.1 tool layer supports searching, inspecting, and comparing
-devices through a tested SQLite repository.
+The current v0.2 service exposes the tested SQLite repository through a
+FastAPI HTTP API for searching, inspecting, and comparing devices.
 
 > All current device and offer records are fictional demo data and must not be
 > treated as real purchasing information.
@@ -19,6 +19,8 @@ devices through a tested SQLite repository.
   for an unknown device, and rejects invalid IDs.
 - `compare_devices(device_ids)` preserves input order, removes duplicate IDs,
   and reports unknown devices.
+- FastAPI exposes these tools through `GET /devices`,
+  `GET /devices/{device_id}`, and `POST /devices/compare`.
 
 ## Quick start
 
@@ -125,7 +127,7 @@ python -m pytest
 ## Roadmap
 
 - [x] v0.1 — SQLite data model and tested device tools
-- [ ] v0.2 — FastAPI service
+- [x] v0.2 — FastAPI service
 - [ ] v0.3 — Structured requirement parsing with an LLM
 - [ ] v0.4 — Tool-calling Agent
 - [ ] v0.5 — RAG with citations
