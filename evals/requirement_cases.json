@@ -18,5 +18,20 @@
       "supports_stylus": true
     },
     "purpose": "检查不同中文数字表达是否被正确提取"
+  },
+  {
+    "id": "unspecified_constraints",
+    "input": "我想了解一下电子墨水屏设备，暂时没有明确的购买条件。",
+    "expected": {},
+    "purpose": "没有明确条件时，不应擅自增加预算、品牌或功能限制"
+  },
+  {
+    "id": "explicit_false_preference",
+    "input": "预算不超过1800元，不要彩色屏幕，其他条件不限。",
+    "expected": {
+      "max_price": 1800,
+      "is_color": false
+    },
+    "purpose": "明确不要彩屏应提取为false，而不是未指定"
   }
 ]
