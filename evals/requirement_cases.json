@@ -1,0 +1,22 @@
+[
+  {
+    "id": "chinese_budget_regression",
+    "input": "最多花两千元，重量不超过零点三公斤，要能用笔写",
+    "expected": {
+      "max_price": 2000,
+      "max_weight_g": 300,
+      "supports_stylus": true
+    },
+    "purpose": "检查中文预算是否遗漏，以及公斤到克的换算"
+  },
+  {
+    "id": "chinese_numbers_variant",
+    "input": "预算上限一千五百元，重量不超过两百克，必须支持手写。",
+    "expected": {
+      "max_price": 1500,
+      "max_weight_g": 200,
+      "supports_stylus": true
+    },
+    "purpose": "检查不同中文数字表达是否被正确提取"
+  }
+]

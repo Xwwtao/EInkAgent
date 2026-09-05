@@ -4,3 +4,6 @@ data/*.db
 .venv/
 .venv-1/
 .pytest_cache/
+.env
+.env.*
+!.env.example
