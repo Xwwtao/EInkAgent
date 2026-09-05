@@ -115,8 +115,8 @@ the demo does not automatically load `.env` files.
 ### Validation and limitations
 
 - Unit tests mock the model client and require no API key or network access.
-- `evals/requirement_cases.json` stores two manually checked regression cases.
-  These cases are not automatically executed by pytest.
+- `evals/requirement_cases.json` stores four human-labeled cases.
+  Live evaluation is run separately from pytest.
 - A budget constraint was initially omitted; both cases passed once after
   a prompt revision. This is not an accuracy benchmark.
 - JSON and Pydantic validation check structure and values, but cannot guarantee
@@ -124,7 +124,41 @@ the demo does not automatically load `.env` files.
 - The workflow performs parsing followed by search; it does not yet implement
   autonomous tool selection.
 
+## Requirement evaluation
 
+Complete the DeepSeek environment-variable setup above, then run:
+
+```bash
+python -m examples.evaluate_requirements
+```
+
+This performs one API request per case and incurs API usage charges.
+It is not run by default pytest or GitHub Actions.
+
+The evaluator compares extracted constraints with human-labeled expectations:
+
+- `missing`: an expected constraint was omitted
+- `unexpected`: an unspecified constraint was added
+- `incorrect`: a constraint has the wrong value
+- `ERROR`: the request or output processing failed
+
+Missing fields and null both mean unspecified. Explicit false and zero
+remain constraints. A case passes only when all constraints match.
+Errors remain in the total case count.
+
+Reports are saved under `evals/runs/`, which Git ignores. Each report records
+the start time, configured model name, prompt SHA-256 hash, expected and actual
+constraints, and per-case outcomes.
+
+A manual run on 2026-09-05 passed all four cases with `deepseek-v4-flash`.
+This small set includes prompt-guided regression examples and is not an
+independent accuracy benchmark.
+
+Offline tests cover comparison behavior and recording failed requests:
+
+```bash
+python -m pytest
+```
 
 ## Architecture
 
