@@ -14,7 +14,7 @@ class DeviceComparisonRequest(BaseModel):
     device_ids: list[PositiveInt] = Field(min_length=2, max_length=5)
 
 
-app = FastAPI(title="EInkAgent", version="0.2.0")
+app = FastAPI(title="EInkAgent", version="0.3.0")
 
 
 @app.get("/health")

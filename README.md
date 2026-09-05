@@ -5,8 +5,9 @@
 EInkAgent is a version-driven AI Agent portfolio project for helping users
 choose E Ink devices from structured specifications and offer data.
 
-The current v0.2 service exposes the tested SQLite repository through a
-FastAPI HTTP API for searching, inspecting, and comparing devices.
+The current v0.3 release adds DeepSeek-powered natural-language requirement
+parsing and a command-line search demo, alongside the existing FastAPI
+device endpoints. An evaluation runner checks extraction against labeled cases.
 
 > All current device and offer records are fictional demo data and must not be
 > treated as real purchasing information.
@@ -79,7 +80,7 @@ and returns HTTP 404 when a requested device does not exist.
 python3 -m examples.search_devices_demo
 ```
 
-## Natural-language search(v0.3 in progress)
+## Natural-language search
 The demo uses DeepSeek JSON Output through the OpenAI Python SDK.
 Pydantic validates the returned data before it is passed to `search_devices()`.
 
@@ -163,11 +164,10 @@ python -m pytest
 ## Architecture
 
 ```text
-Examples / future API / future Agent
-                 |
-                 v
-       device_repository.py
-      search / detail / compare
+Natural-language CLI → DeepSeek → DeviceRequirements
+                  |
+                  v
+HTTP client → FastAPI → device_repository.py ← Python examples
                  |
                  v
             database.py
@@ -176,7 +176,9 @@ Examples / future API / future Agent
        SQLite: devices + offers
 ```
 
-The repository layer keeps SQL and validation separate from future API and Agent interfaces, allowing those interfaces to reuse the same tested tools.
+The CLI parses natural-language requirements before calling the repository.
+FastAPI exposes search, detail, and comparison using explicit parameters;
+natural-language parsing is not yet exposed through HTTP.
 
 ## 运行测试
 
@@ -209,7 +211,7 @@ python -m pytest
 
 - [x] v0.1 — SQLite data model and tested device tools
 - [x] v0.2 — FastAPI service
-- [ ] v0.3 — Structured requirement parsing with an LLM
+- [x] v0.3 — Structured requirement parsing with an LLM
 - [ ] v0.4 — Tool-calling Agent
 - [ ] v0.5 — RAG with citations
 - [ ] v0.6 — Memory and reliability
