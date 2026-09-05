@@ -6,6 +6,7 @@ from pydantic import ValidationError
 from device_repository import search_devices
 from eink_agent.requirements import DeviceRequirements
 
+
 def test_requirements_accept_valid_search_constraints():
     requirements = DeviceRequirements.model_validate(
         {
@@ -36,6 +37,7 @@ def test_requirements_reject_negative_price():
 def test_requirements_reject_unexpected_fields():
     with pytest.raises(ValidationError):
         DeviceRequirements.model_validate({"battery_days": 30})
+
 
 def test_requirements_can_drive_device_search():
     requirements = DeviceRequirements(

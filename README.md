@@ -79,6 +79,53 @@ and returns HTTP 404 when a requested device does not exist.
 python3 -m examples.search_devices_demo
 ```
 
+## Natural-language search(v0.3 in progress)
+The demo uses DeepSeek JSON Output through the OpenAI Python SDK.
+Pydantic validates the returned data before it is passed to `search_devices()`.
+
+After completing Quick start, configure credentials in your current zsh terminal:
+
+```bash
+read -s "DEEPSEEK_API_KEY?DeepSeek API key: "
+export DEEPSEEK_API_KEY
+export DEEPSEEK_MODEL=deepseek-v4-flash
+python -m examples.parse_requirements_demo
+```
+
+Example input:
+
+```text
+最多花两千元，重量不超过零点三公斤，要能用笔写
+```
+
+Expected search constraints:
+
+```json
+{
+  "max_price": 2000,
+  "max_weight_g": 300,
+  "supports_stylus": true
+}
+```
+
+The demo sends user input to DeepSeek and incurs API usage charges.
+Never commit API keys. Credentials are read from environment variables;
+the demo does not automatically load `.env` files.
+
+### Validation and limitations
+
+- Unit tests mock the model client and require no API key or network access.
+- `evals/requirement_cases.json` stores two manually checked regression cases.
+  These cases are not automatically executed by pytest.
+- A budget constraint was initially omitted; both cases passed once after
+  a prompt revision. This is not an accuracy benchmark.
+- JSON and Pydantic validation check structure and values, but cannot guarantee
+  that every user requirement was understood.
+- The workflow performs parsing followed by search; it does not yet implement
+  autonomous tool selection.
+
+
+
 ## Architecture
 
 ```text
