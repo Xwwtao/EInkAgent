@@ -138,19 +138,25 @@ After configuring the DeepSeek environment variables above, run:
 ```bash
 python -m examples.tool_calling_agent_demo
 ```
+
 Example input:
+
 ```text
 请推荐价格不超过2000元、支持手写、重量不超过300克的电子墨水屏设备。
 ```
+
 The demo displays:
+
 - the tool selected by the model
 - the model-generated arguments
 - the matching tool-call ID
 - the number of database records returned
 - the final answer generated from those records
+
 Only allowlisted tools can execute. Pydantic validates tool arguments before
 they reach SQLite, and the Agent stops after a bounded number of model rounds.
 The demo normally makes at least two paid API requests when a tool is used.
+
 Tool traces are returned in memory and printed by the demo. They are not yet
 persisted to a database or monitoring system.
 
@@ -207,9 +213,10 @@ FastAPI with explicit parameters ───────────────�
                                                     SQLite: devices + offers
 ```
 
-The CLI parses natural-language requirements before calling the repository.
-FastAPI exposes search, detail, and comparison using explicit parameters;
-natural-language parsing is not yet exposed through HTTP.
+The requirement-parser CLI follows a fixed parse-then-search pipeline. The
+Agent CLI lets DeepSeek choose an allowlisted tool and records its execution
+trace. Both workflows and the FastAPI endpoints share the same tested
+repository and SQLite data data layer.
 
 ## 运行测试
 
@@ -230,6 +237,9 @@ python -m pytest
 - `list_devices.py`：查看全部设备。
 - `device_repository.py`：封装可供 API 和 Agent 调用的条件查询函数。
 - `examples/search_devices_demo.py`：条件查询功能演示。
+- `eink_agent/agent_tools.py`：定义模型可见的工具 Schema、白名单和参数校验。
+- `eink_agent/agent.py``：实现有轮数上限的模型—工具循环和执行轨迹。
+- `examples/tool_calling_agent_demo.py`：运行真实 DeepSeek Tool Calling 演示。
 
 ## 数据设计原则
 
