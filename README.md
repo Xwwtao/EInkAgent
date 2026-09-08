@@ -83,6 +83,7 @@ python3 -m examples.search_devices_demo
 ```
 
 ## Natural-language search
+
 The demo uses DeepSeek JSON Output through the OpenAI Python SDK.
 Pydantic validates the returned data before it is passed to `search_devices()`.
 
@@ -216,7 +217,7 @@ FastAPI with explicit parameters ───────────────�
 The requirement-parser CLI follows a fixed parse-then-search pipeline. The
 Agent CLI lets DeepSeek choose an allowlisted tool and records its execution
 trace. Both workflows and the FastAPI endpoints share the same tested
-repository and SQLite data data layer.
+repository and SQLite data layer.
 
 ## 运行测试
 
@@ -238,7 +239,7 @@ python -m pytest
 - `device_repository.py`：封装可供 API 和 Agent 调用的条件查询函数。
 - `examples/search_devices_demo.py`：条件查询功能演示。
 - `eink_agent/agent_tools.py`：定义模型可见的工具 Schema、白名单和参数校验。
-- `eink_agent/agent.py``：实现有轮数上限的模型—工具循环和执行轨迹。
+- `eink_agent/agent.py`：实现有轮数上限的模型—工具循环和执行轨迹。
 - `examples/tool_calling_agent_demo.py`：运行真实 DeepSeek Tool Calling 演示。
 
 ## 数据设计原则
