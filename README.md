@@ -22,6 +22,8 @@ device endpoints. An evaluation runner checks extraction against labeled cases.
   and reports unknown devices.
 - FastAPI exposes these tools through `GET /devices`,
   `GET /devices/{device_id}`, and `POST /devices/compare`.
+- `run_agent(...)` lets DeepSeek choose the allowlisted `search_devices` tool,
+  validates its arguments, executes the SQLite query, and records a tool trace.
 
 ## Quick start
 
@@ -122,8 +124,36 @@ the demo does not automatically load `.env` files.
   a prompt revision. This is not an accuracy benchmark.
 - JSON and Pydantic validation check structure and values, but cannot guarantee
   that every user requirement was understood.
-- The workflow performs parsing followed by search; it does not yet implement
-  autonomous tool selection.
+- The requirement-parser demo remains a fixed parsing-to-search pipeline.
+  The separate tool-calling demo supports model-directed tool selection.
+
+## Tool-calling Agent
+
+The v0.4 development version adds a bounded model-tool-model loop. DeepSeek
+can choose the `search_devices` tool, while Python remains responsible for
+validating and executing the request.
+
+After configuring the DeepSeek environment variables above, run:
+
+```bash
+python -m examples.tool_calling_agent_demo
+```
+Example input:
+```text
+请推荐价格不超过2000元、支持手写、重量不超过300克的电子墨水屏设备。
+```
+The demo displays:
+- the tool selected by the model
+- the model-generated arguments
+- the matching tool-call ID
+- the number of database records returned
+- the final answer generated from those records
+Only allowlisted tools can execute. Pydantic validates tool arguments before
+they reach SQLite, and the Agent stops after a bounded number of model rounds.
+The demo normally makes at least two paid API requests when a tool is used.
+Tool traces are returned in memory and printed by the demo. They are not yet
+persisted to a database or monitoring system.
+
 
 ## Requirement evaluation
 
@@ -164,16 +194,17 @@ python -m pytest
 ## Architecture
 
 ```text
-Natural-language CLI → DeepSeek → DeviceRequirements
-                  |
-                  v
-HTTP client → FastAPI → device_repository.py ← Python examples
-                 |
-                 v
-            database.py
-                 |
-                 v
-       SQLite: devices + offers
+Requirement parser CLI → DeepSeek JSON → DeviceRequirements ─────┐
+                                                                  │
+Agent CLI → DeepSeek tool choice → run_agent → agent_tools ───────┤
+                                                                  v
+FastAPI with explicit parameters ─────────────────→ device_repository.py
+                                                                  |
+                                                                  v
+                                                             database.py
+                                                                  |
+                                                                  v
+                                                    SQLite: devices + offers
 ```
 
 The CLI parses natural-language requirements before calling the repository.
