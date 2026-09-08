@@ -33,13 +33,21 @@ def test_run_agent_executes_search_tool_and_returns_answer():
         Mock(choices=[Mock(message=final_message)]),
     ]
 
-    answer = run_agent(
+    result = run_agent(
         "推荐两千元以内的电子墨水屏设备",
         client=client,
         model="test-model",
     )
 
-    assert answer == "找到两台符合预算的演示设备。"
+    assert result.answer == "找到两台符合预算的演示设备。"
+    assert len(result.tool_trace) == 1
+
+    trace = result.tool_trace[0]
+    assert trace["tool_call_id"] == "call_123"
+    assert trace["name"] == "search_devices"
+    assert trace["arguments"] == {"max_price": 2000}
+    assert len(trace["result"]) == 2
+
     assert client.chat.completions.create.call_count == 2
 
     second_request = client.chat.completions.create.call_args_list[1].kwargs
@@ -62,14 +70,14 @@ def test_run_agent_returns_direct_model_answer():
         ]
     )
 
-    answer = run_agent(
+    result = run_agent(
         "我想买电子墨水屏",
         client=client,
         model="test-model",
     )
 
-    assert answer == "请先告诉我预算和主要用途。"
-    assert client.chat.completions.create.call_count == 1
+    assert result.answer == "请先告诉我预算和主要用途。"
+    assert result.tool_trace == []
 
 def test_run_agent_stops_after_maximum_rounds():
     client = Mock()

@@ -1,11 +1,20 @@
 """Minimal tool-calling agent loop."""
 
+from dataclasses import dataclass
 import json
 from typing import Any
 
 from openai import OpenAI
 
 from eink_agent.agent_tools import SEARCH_DEVICES_TOOL, execute_tool
+
+
+@dataclass
+class AgentResult:
+    """Final answer and successfully executed tool calls."""
+
+    answer: str
+    tool_trace: list[dict[str, Any]]
 
 
 SYSTEM_PROMPT = (
@@ -22,7 +31,7 @@ def run_agent(
     client: OpenAI,
     model: str,
     max_rounds: int = 3,
-) -> str:
+) -> AgentResult:
     """Run a bounded model-tool-model conversation."""
     normalized_text = user_text.strip()
     if not normalized_text:
@@ -32,6 +41,8 @@ def run_agent(
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": normalized_text},
     ]
+
+    tool_trace: list[dict[str, Any]] = []
 
     for _ in range(max_rounds):
         response = client.chat.completions.create(
@@ -51,7 +62,10 @@ def run_agent(
             content = message.content
             if not content or not content.strip():
                 raise RuntimeError("Model did not return a final answer")
-            return content
+            return AgentResult(
+                answer=content,
+                tool_trace=tool_trace,
+            )
 
         messages.append(message)
 
@@ -60,6 +74,15 @@ def run_agent(
             result = execute_tool(
                 tool_call.function.name,
                 arguments,
+            )
+
+            tool_trace.append(
+                {
+                    "tool_call_id": tool_call.id,
+                    "name": tool_call.function.name,
+                    "arguments": arguments,
+                    "result": result,
+                }
             )
 
             messages.append(
