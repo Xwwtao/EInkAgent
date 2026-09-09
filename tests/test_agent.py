@@ -1,8 +1,8 @@
 """Tests for the tool-calling agent loop."""
-import pytest
 import json
-
 from unittest.mock import Mock
+
+import pytest
 
 from eink_agent.agent import run_agent
 
@@ -226,3 +226,45 @@ def test_run_agent_executes_compare_devices_tool():
         device["model"]
         for device in trace["result"]
     ] == ["Color 7", "Reader 6"]
+
+def test_run_agent_records_zero_results_for_unknown_device():
+    client = Mock()
+    tool_call = _make_tool_call(
+        "get_device_detail",
+        {"device_id": 999_999},
+        "call_missing",
+    )
+
+    client.chat.completions.create.side_effect = [
+        Mock(
+            choices=[
+                Mock(
+                    message=Mock(
+                        content=None,
+                        tool_calls=[tool_call],
+                    )
+                )
+            ]
+        ),
+        Mock(
+            choices=[
+                Mock(
+                    message=Mock(
+                        content="没有找到这个设备。",
+                        tool_calls=[],
+                    )
+                )
+            ]
+        ),
+    ]
+
+    result = run_agent(
+        "查看999999号设备",
+        client=client,
+        model="test-model",
+    )
+
+    trace = result.tool_trace[0]
+
+    assert trace["result"] is None
+    assert trace["result_count"] == 0

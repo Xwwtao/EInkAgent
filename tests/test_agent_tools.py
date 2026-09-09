@@ -1,4 +1,5 @@
 import pytest
+from pydantic import ValidationError
 
 from eink_agent.agent_tools import (
     COMPARE_DEVICES_TOOL,
@@ -6,8 +7,6 @@ from eink_agent.agent_tools import (
     SEARCH_DEVICES_TOOL,
     execute_tool,
 )
-
-from pydantic import ValidationError
 
 
 def test_search_devices_tool_has_function_schema():
