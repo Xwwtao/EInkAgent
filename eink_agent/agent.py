@@ -19,7 +19,9 @@ class AgentResult:
 
 SYSTEM_PROMPT = (
     "You are EInkAgent, an assistant for comparing fictional demo E Ink "
-    "devices. Use the available search tool when device data is needed. "
+    "devices. Use the available tools whenever device data is needed. "
+    "Use search_devices for constraints, get_device_detail for one known "
+    "device ID, and compare_devices for multiple device IDs. "
     "Base device claims only on tool results. Clearly state that results "
     "are fictional demo data."
 )
@@ -76,12 +78,20 @@ def run_agent(
                 arguments,
             )
 
+            if result is None:
+                result_count = 0
+            elif isinstance(result, list):
+                result_count = len(result)
+            else:
+                result_count = 1
+
             tool_trace.append(
                 {
                     "tool_call_id": tool_call.id,
                     "name": tool_call.function.name,
                     "arguments": arguments,
                     "result": result,
+                    "result_count": result_count,
                 }
             )
 

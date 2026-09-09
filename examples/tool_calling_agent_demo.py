@@ -43,7 +43,7 @@ def main() -> None:
         print(f"- 工具：{trace['name']}")
         print(f"  参数：{arguments}")
         print(f"  调用 ID：{trace['tool_call_id']}")
-        print(f"  返回记录数：{len(trace['result'])}")
+        print(f"  返回记录数：{trace['result_count']}")
 
     print("\nEInkAgent 回答：")
     print(result.answer)

@@ -82,6 +82,7 @@ def test_run_agent_executes_search_tool_and_returns_answer():
 
     assert tool_message["role"] == "tool"
     assert tool_message["tool_call_id"] == "call_123"
+    assert trace["result_count"] == 2
     assert '"Reader 6"' in tool_message["content"]
 
 def test_run_agent_returns_direct_model_answer():
@@ -176,6 +177,7 @@ def test_run_agent_executes_device_detail_tool():
 
     assert trace["name"] == "get_device_detail"
     assert trace["arguments"] == {"device_id": 1}
+    assert trace["result_count"] == 1
     assert trace["result"]["model"] == "Reader 6"
 
 def test_run_agent_executes_compare_devices_tool():
@@ -219,6 +221,7 @@ def test_run_agent_executes_compare_devices_tool():
 
     assert trace["name"] == "compare_devices"
     assert trace["arguments"] == {"device_ids": [3, 1]}
+    assert trace["result_count"] == 2
     assert [
         device["model"]
         for device in trace["result"]
