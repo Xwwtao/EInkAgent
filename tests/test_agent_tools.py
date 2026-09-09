@@ -1,7 +1,12 @@
 import pytest
-
-from eink_agent.agent_tools import SEARCH_DEVICES_TOOL, execute_tool
 from pydantic import ValidationError
+
+from eink_agent.agent_tools import (
+    COMPARE_DEVICES_TOOL,
+    GET_DEVICE_DETAIL_TOOL,
+    SEARCH_DEVICES_TOOL,
+    execute_tool,
+)
 
 
 def test_search_devices_tool_has_function_schema():
@@ -41,4 +46,60 @@ def test_execute_tool_rejects_unexpected_arguments():
         execute_tool(
             "search_devices",
             {"delete_everything": True},
+        )
+
+
+def test_device_detail_tool_has_required_positive_id():
+    function = GET_DEVICE_DETAIL_TOOL["function"]
+    parameters = function["parameters"]
+
+    assert function["name"] == "get_device_detail"
+    assert parameters["required"] == ["device_id"]
+    assert parameters["properties"]["device_id"]["exclusiveMinimum"] == 0
+
+
+def test_compare_devices_tool_requires_two_to_five_ids():
+    function = COMPARE_DEVICES_TOOL["function"]
+    device_ids = function["parameters"]["properties"]["device_ids"]
+
+    assert function["name"] == "compare_devices"
+    assert device_ids["minItems"] == 2
+    assert device_ids["maxItems"] == 5
+    assert device_ids["items"]["exclusiveMinimum"] == 0
+
+def test_execute_tool_returns_device_detail():
+    device = execute_tool(
+        "get_device_detail",
+        {"device_id": 1},
+    )
+
+    assert device is not None
+    assert device["model"] == "Reader 6"
+
+
+def test_execute_tool_compares_devices_in_requested_order():
+    devices = execute_tool(
+        "compare_devices",
+        {"device_ids": [3, 1]},
+    )
+
+    assert [device["model"] for device in devices] == [
+        "Color 7",
+        "Reader 6",
+    ]
+
+
+def test_execute_tool_rejects_invalid_detail_id():
+    with pytest.raises(ValidationError):
+        execute_tool(
+            "get_device_detail",
+            {"device_id": 0},
+        )
+
+
+def test_execute_tool_rejects_too_few_comparison_ids():
+    with pytest.raises(ValidationError):
+        execute_tool(
+            "compare_devices",
+            {"device_ids": [1]},
         )
