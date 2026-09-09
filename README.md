@@ -22,8 +22,9 @@ device endpoints. An evaluation runner checks extraction against labeled cases.
   and reports unknown devices.
 - FastAPI exposes these tools through `GET /devices`,
   `GET /devices/{device_id}`, and `POST /devices/compare`.
-- `run_agent(...)` lets DeepSeek choose the allowlisted `search_devices` tool,
-  validates its arguments, executes the SQLite query, and records a tool trace.
+- `run_agent(...)` lets DeepSeek choose between the allowlisted search, detail,
+  and comparison tools, validates their arguments, executes SQLite queries,
+  and records tool traces.
 
 ## Quick start
 
@@ -131,8 +132,14 @@ the demo does not automatically load `.env` files.
 ## Tool-calling Agent
 
 The v0.4 development version adds a bounded model-tool-model loop. DeepSeek
-can choose the `search_devices` tool, while Python remains responsible for
-validating and executing the request.
+can choose between `search_devices`, `get_device_detail`, and `compare_devices`,
+while Python remains responsible for validating and executing every request.
+
+Available tools:
+
+- `search_devices`: filter devices using explicit constraints
+- `get_device_detail`: inspect one device using a positive ID
+- `compare_devices`: compare two to five positive device IDs
 
 After configuring the DeepSeek environment variables above, run:
 
@@ -143,7 +150,9 @@ python -m examples.tool_calling_agent_demo
 Example input:
 
 ```text
-请推荐价格不超过2000元、支持手写、重量不超过300克的电子墨水屏设备。
+请推荐价格不超过2000元、支持手写、重量不超过300克的设备。
+请查看1号设备的完整详情。
+请比较1号和3号设备。
 ```
 
 The demo displays:
@@ -160,6 +169,9 @@ The demo normally makes at least two paid API requests when a tool is used.
 
 Tool traces are returned in memory and printed by the demo. They are not yet
 persisted to a database or monitoring system.
+
+A manual run on 2026-09-09 verified that DeepSeek selected
+`get_device_detail` for a single-device request and `compare_devices` for a two-device comparison. This demonstrates tool selection behavior, not an accuracy benchmark.
 
 
 ## Requirement evaluation
