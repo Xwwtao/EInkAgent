@@ -1,9 +1,25 @@
 """Tests for the tool-calling agent loop."""
 import pytest
+import json
 
 from unittest.mock import Mock
 
 from eink_agent.agent import run_agent
+
+def _make_tool_call(
+    name: str,
+    arguments: dict[str, object],
+    call_id: str,
+) -> Mock:
+    function = Mock(
+        arguments=json.dumps(arguments),
+    )
+    function.name = name
+
+    return Mock(
+        id=call_id,
+        function=function,
+    )
 
 
 def test_run_agent_executes_search_tool_and_returns_answer():
@@ -118,3 +134,92 @@ def test_run_agent_stops_after_maximum_rounds():
         )
 
     assert client.chat.completions.create.call_count == 2
+
+def test_run_agent_executes_device_detail_tool():
+    client = Mock()
+    tool_call = _make_tool_call(
+        "get_device_detail",
+        {"device_id": 1},
+        "call_detail",
+    )
+
+    client.chat.completions.create.side_effect = [
+        Mock(
+            choices=[
+                Mock(
+                    message=Mock(
+                        content=None,
+                        tool_calls=[tool_call],
+                    )
+                )
+            ]
+        ),
+        Mock(
+            choices=[
+                Mock(
+                    message=Mock(
+                        content="1号设备是 Reader 6。",
+                        tool_calls=[],
+                    )
+                )
+            ]
+        ),
+    ]
+
+    result = run_agent(
+        "查看1号设备的详情",
+        client=client,
+        model="test-model",
+    )
+
+    trace = result.tool_trace[0]
+
+    assert trace["name"] == "get_device_detail"
+    assert trace["arguments"] == {"device_id": 1}
+    assert trace["result"]["model"] == "Reader 6"
+
+def test_run_agent_executes_compare_devices_tool():
+    client = Mock()
+    tool_call = _make_tool_call(
+        "compare_devices",
+        {"device_ids": [3, 1]},
+        "call_compare",
+    )
+
+    client.chat.completions.create.side_effect = [
+        Mock(
+            choices=[
+                Mock(
+                    message=Mock(
+                        content=None,
+                        tool_calls=[tool_call],
+                    )
+                )
+            ]
+        ),
+        Mock(
+            choices=[
+                Mock(
+                    message=Mock(
+                        content="已比较 Color 7 和 Reader 6。",
+                        tool_calls=[],
+                    )
+                )
+            ]
+        ),
+    ]
+
+    result = run_agent(
+        "比较3号和1号设备",
+        client=client,
+        model="test-model",
+    )
+
+    trace = result.tool_trace[0]
+
+    assert trace["name"] == "compare_devices"
+    assert trace["arguments"] == {"device_ids": [3, 1]}
+    assert [
+        device["model"]
+        for device in trace["result"]
+    ] == ["Color 7", "Reader 6"]
