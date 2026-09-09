@@ -6,7 +6,7 @@ from typing import Any
 
 from openai import OpenAI
 
-from eink_agent.agent_tools import SEARCH_DEVICES_TOOL, execute_tool
+from eink_agent.agent_tools import AGENT_TOOLS, execute_tool
 
 
 @dataclass
@@ -48,7 +48,7 @@ def run_agent(
         response = client.chat.completions.create(
             model=model,
             messages=messages,
-            tools=[SEARCH_DEVICES_TOOL],
+            tools=AGENT_TOOLS,
             tool_choice="auto",
         )
 

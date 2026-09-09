@@ -62,6 +62,12 @@ COMPARE_DEVICES_TOOL = {
     },
 }
 
+AGENT_TOOLS = [
+    SEARCH_DEVICES_TOOL,
+    GET_DEVICE_DETAIL_TOOL,
+    COMPARE_DEVICES_TOOL,
+]
+
 _TOOL_REGISTRY = {
     "search_devices": (
         DeviceRequirements,

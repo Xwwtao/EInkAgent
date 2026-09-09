@@ -41,6 +41,17 @@ def test_run_agent_executes_search_tool_and_returns_answer():
 
     assert result.answer == "找到两台符合预算的演示设备。"
     assert len(result.tool_trace) == 1
+    first_request = client.chat.completions.create.call_args_list[0].kwargs
+    tool_names = [
+        tool["function"]["name"]
+        for tool in first_request["tools"]
+    ]
+
+    assert tool_names == [
+        "search_devices",
+        "get_device_detail",
+        "compare_devices",
+    ]
 
     trace = result.tool_trace[0]
     assert trace["tool_call_id"] == "call_123"
