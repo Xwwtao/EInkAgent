@@ -9,3 +9,4 @@ data/*.db
 !.env.example
 evals/runs/
 evals/agent_runs/
+.DS_Store
