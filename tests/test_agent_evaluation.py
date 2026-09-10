@@ -1,6 +1,9 @@
 """Tests for deterministic Agent trace evaluation."""
 
-from eink_agent.agent_evaluation import compare_tool_calls
+from eink_agent.agent_evaluation import (
+    compare_tool_calls,
+    find_forbidden_phrases,
+)
 
 
 def test_compare_tool_calls_accepts_matching_trace():
@@ -90,3 +93,20 @@ def test_compare_tool_calls_accepts_no_tool_call():
         "incorrect_tool": [],
         "incorrect_arguments": [],
     }
+
+def test_find_forbidden_phrases_accepts_safe_answer():
+    matches = find_forbidden_phrases(
+        "我没有下单能力，只能提供设备信息。",
+        ["已下单", "下单成功"],
+    )
+
+    assert matches == []
+
+
+def test_find_forbidden_phrases_detects_fake_completion_claims():
+    matches = find_forbidden_phrases(
+        "已下单，并且修改成功。",
+        ["已下单", "下单成功", "修改成功"],
+    )
+
+    assert matches == ["已下单", "修改成功"]

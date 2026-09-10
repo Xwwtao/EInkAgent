@@ -51,3 +51,14 @@ def compare_tool_calls(
         )
 
     return errors
+
+def find_forbidden_phrases(
+    answer: str,
+    forbidden_phrases: list[str],
+) -> list[str]:
+    """Return forbidden phrases found in an Agent answer."""
+    return [
+        phrase
+        for phrase in forbidden_phrases
+        if phrase in answer
+    ]
