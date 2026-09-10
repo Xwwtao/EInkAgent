@@ -132,7 +132,8 @@ the demo does not automatically load `.env` files.
 
 ## Tool-calling Agent
 
-The v0.4 release adds a bounded model-tool-model loop.DeepSeek can choose between `search_devices`, `get_device_detail`, and `compare_devices`,
+The v0.4 release adds a bounded model-tool-model loop. 
+DeepSeek can choose between `search_devices`, `get_device_detail`, and `compare_devices`,
 while Python remains responsible for validating and executing every request.
 
 Available tools:
