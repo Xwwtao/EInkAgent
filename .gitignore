@@ -8,3 +8,4 @@ data/*.db
 .env.*
 !.env.example
 evals/runs/
+evals/agent_runs/
