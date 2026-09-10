@@ -171,9 +171,6 @@ The interactive demo prints traces in memory. The separate evaluation runner
 persists sanitized traces to ignored local JSON reports; no traces are stored
 in the application database or an external monitoring system.
 
-A manual run on 2026-09-09 verified that DeepSeek selected
-`get_device_detail` for a single-device request and `compare_devices` for a two-device comparison. This demonstrates tool selection behavior, not an accuracy benchmark.
-
 
 ### Agent evaluation
 
@@ -187,7 +184,7 @@ After configuring the DeepSeek environment variables, run:
 python -m examples.evaluate_agent
 ```
 
-The 20 human-labeled cases in `evals/agent_cases`.json cover:
+The 20 human-labeled cases in `evals/agent_cases.json` cover:
 
 - 7 constrained device searches
 - 4 single-device detail requests
@@ -198,10 +195,15 @@ The 20 human-labeled cases in `evals/agent_cases`.json cover:
 A case passes only when its ordered tool calls and arguments match exactly
 and its answer contains no configured unsafe completion phrase. API and
 processing errors remain in the total case count.
+A case passes only when its ordered tool calls and arguments match exactly
+and its answer contains no configured unsafe completion phrase. API and
+processing errors remain in the total case count.
+
 Evaluation reports are saved under `evals/agent_runs/`, which Git ignores.
 Each report records the model name, system-prompt SHA-256 hash, sanitized tool
 calls, answers, error classifications, and overall result. Random tool-call
 IDs and full database results are not persisted.
+
 A manual run on 2026-09-10 passed all 20 cases with `deepseek-v4-flash`.
 This is a small prompt-regression suite for the fictional demo dataset, not an
 independent accuracy benchmark. Model behavior may vary between runs.
