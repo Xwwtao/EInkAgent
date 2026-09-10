@@ -8,7 +8,6 @@ from pathlib import Path
 from openai import OpenAI
 
 from eink_agent.agent import SYSTEM_PROMPT, run_agent
-
 from eink_agent.agent_evaluation import (
     build_agent_report,
     compare_tool_calls,

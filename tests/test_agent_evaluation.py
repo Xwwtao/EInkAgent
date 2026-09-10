@@ -69,6 +69,7 @@ def test_compare_tool_calls_classifies_mismatches():
     ]
     assert errors["unexpected"] == ["call 2: get_device_detail"]
 
+
 def test_compare_tool_calls_reports_missing_call():
     expected = [
         {
@@ -94,6 +95,7 @@ def test_compare_tool_calls_accepts_no_tool_call():
         "incorrect_tool": [],
         "incorrect_arguments": [],
     }
+
 
 def test_find_forbidden_phrases_accepts_safe_answer():
     matches = find_forbidden_phrases(

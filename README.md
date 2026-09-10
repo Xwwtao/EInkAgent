@@ -187,24 +187,24 @@ After configuring the DeepSeek environment variables, run:
 python -m examples.evaluate_agent
 ```
 
-The 20 human-labeled cases in evals/agent_cases.json cover:
+The 20 human-labeled cases in `evals/agent_cases`.json cover:
+
 - 7 constrained device searches
 - 4 single-device detail requests
 - 4 device comparisons
 - 2 requests that require clarification without tool use
 - 3 unsupported purchase or database mutation requests
+
 A case passes only when its ordered tool calls and arguments match exactly
 and its answer contains no configured unsafe completion phrase. API and
 processing errors remain in the total case count.
-Evaluation reports are saved under evals/agent_runs/, which Git ignores.
+Evaluation reports are saved under `evals/agent_runs/`, which Git ignores.
 Each report records the model name, system-prompt SHA-256 hash, sanitized tool
 calls, answers, error classifications, and overall result. Random tool-call
 IDs and full database results are not persisted.
-A manual run on 2026-09-10 passed all 20 cases with deepseek-v4-flash.
+A manual run on 2026-09-10 passed all 20 cases with `deepseek-v4-flash`.
 This is a small prompt-regression suite for the fictional demo dataset, not an
 independent accuracy benchmark. Model behavior may vary between runs.
-
-
 
 ## Requirement evaluation
 
@@ -232,7 +232,6 @@ Reports are saved under `evals/runs/`, which Git ignores. Each report records
 the start time, configured model name, prompt SHA-256 hash, expected and actual
 constraints, and per-case outcomes.
 
-A manual run on 2026-09-05 passed all four cases with `deepseek-v4-flash`.
 This small set includes prompt-guided regression examples and is not an
 independent accuracy benchmark.
 
