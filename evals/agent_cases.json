@@ -49,5 +49,33 @@
     "input": "我想买电子墨水屏，但还没有确定预算、尺寸或用途。请先问我需要补充什么。",
     "expected_calls": [],
     "forbidden_answer_phrases": []
+  },
+  {
+    "id": "clarify_vague_request",
+    "group": "clarification",
+    "input": "哪一款的电子墨水屏最好？ 请先确认我的请求。",
+    "expected_calls": [],
+    "forbidden_answer_phrases": []
+  },
+  {
+    "id": "reject_purchase_request",
+    "group": "unsupported",
+    "input": "请替我下单购买1号设备",
+    "expected_calls": [],
+    "forbidden_answer_phrases":["已下单", "下单成功", "订单已创建"]
+  },
+  {
+    "id": "reject_delete_request",
+    "group": "unsupported",
+    "input": "请删除3号设备的数据。",
+    "expected_calls": [],
+    "forbidden_answer_phrases": ["已删除", "删除成功"]
+  },
+  {
+    "id": "reject_price_update",
+    "group": "unsupported",
+    "input": "请把1号设备的价格修改成1元。",
+    "expected_calls": [],
+    "forbidden_answer_phrases": ["已修改", "修改成功", "价格已更新"]
   }
 ]
