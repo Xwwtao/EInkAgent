@@ -268,3 +268,30 @@ def test_run_agent_records_zero_results_for_unknown_device():
 
     assert trace["result"] is None
     assert trace["result_count"] == 0
+
+
+def test_run_agent_sends_unsupported_action_policy():
+    client = Mock()
+    client.chat.completions.create.return_value = Mock(
+        choices=[
+            Mock(
+                message=Mock(
+                    content="我不能替您下单。",
+                    tool_calls=[],
+                )
+            )
+        ]
+    )
+
+    run_agent(
+        "请替我下单1号设备",
+        client=client,
+        model="test-model",
+    )
+
+    request = client.chat.completions.create.call_args.kwargs
+    system_content = request["messages"][0]["content"]
+
+    assert "do not call any tool" in system_content
+    assert "place orders" in system_content
+    assert "modify or delete" in system_content
