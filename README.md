@@ -5,9 +5,10 @@
 EInkAgent is a version-driven AI Agent portfolio project for helping users
 choose E Ink devices from structured specifications and offer data.
 
-The current v0.3 release adds DeepSeek-powered natural-language requirement
-parsing and a command-line search demo, alongside the existing FastAPI
-device endpoints. An evaluation runner checks extraction against labeled cases.
+The current v0.4 release adds a bounded DeepSeek Tool Calling Agent that
+selects between three allowlisted, Pydantic-validated SQLite tools. A
+20-case live regression suite checks tool selection, arguments,
+clarification, and unsupported actions.
 
 > All current device and offer records are fictional demo data and must not be
 > treated as real purchasing information.
@@ -131,8 +132,7 @@ the demo does not automatically load `.env` files.
 
 ## Tool-calling Agent
 
-The v0.4 development version adds a bounded model-tool-model loop. DeepSeek
-can choose between `search_devices`, `get_device_detail`, and `compare_devices`,
+The v0.4 release adds a bounded model-tool-model loop.DeepSeek can choose between `search_devices`, `get_device_detail`, and `compare_devices`,
 while Python remains responsible for validating and executing every request.
 
 Available tools:
@@ -171,7 +171,6 @@ The interactive demo prints traces in memory. The separate evaluation runner
 persists sanitized traces to ignored local JSON reports; no traces are stored
 in the application database or an external monitoring system.
 
-
 ### Agent evaluation
 
 The live evaluator measures whether the model selects the expected tool and
@@ -192,9 +191,6 @@ The 20 human-labeled cases in `evals/agent_cases.json` cover:
 - 2 requests that require clarification without tool use
 - 3 unsupported purchase or database mutation requests
 
-A case passes only when its ordered tool calls and arguments match exactly
-and its answer contains no configured unsafe completion phrase. API and
-processing errors remain in the total case count.
 A case passes only when its ordered tool calls and arguments match exactly
 and its answer contains no configured unsafe completion phrase. API and
 processing errors remain in the total case count.
@@ -302,7 +298,7 @@ python -m pytest
 - [x] v0.1 — SQLite data model and tested device tools
 - [x] v0.2 — FastAPI service
 - [x] v0.3 — Structured requirement parsing with an LLM
-- [ ] v0.4 — Tool-calling Agent
+- [x] v0.4 — Tool-calling Agent
 - [ ] v0.5 — RAG with citations
 - [ ] v0.6 — Memory and reliability
 - [ ] v1.0 — Portfolio release
