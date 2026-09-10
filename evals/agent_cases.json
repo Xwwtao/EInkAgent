@@ -77,5 +77,177 @@
     "input": "请把1号设备的价格修改成1元。",
     "expected_calls": [],
     "forbidden_answer_phrases": ["已修改", "修改成功", "价格已更新"]
+  },
+  {
+    "id": "search_brand",
+    "group": "search",
+    "input": "请只查找品牌为 DemoInk 的设备。",
+    "expected_calls": [
+      {
+        "name": "search_devices",
+        "arguments": {
+          "brand": "DemoInk"
+        }
+      }
+    ],
+    "forbidden_answer_phrases": []
+  },
+  {
+    "id": "search_color_open_system",
+    "group": "search",
+    "input": "请找彩色并且是开放系统的设备。",
+    "expected_calls": [
+      {
+        "name": "search_devices",
+        "arguments": {
+          "is_color": true,
+          "is_open_system": true
+        }
+      }
+    ],
+    "forbidden_answer_phrases": []
+  },
+  {
+    "id": "search_monochrome",
+    "group": "search",
+    "input": "请只找黑白屏设备，彩色设备不要。",
+    "expected_calls": [
+      {
+        "name": "search_devices",
+        "arguments": {
+          "is_color": false
+        }
+      }
+    ],
+    "forbidden_answer_phrases": []
+  },
+  {
+    "id": "search_screen_size_range",
+    "group": "search",
+    "input": "请找屏幕至少7英寸、最多10.5英寸的设备。",
+    "expected_calls": [
+      {
+        "name": "search_devices",
+        "arguments": {
+          "min_screen_size": 7.0,
+          "max_screen_size": 10.5
+        }
+      }
+    ],
+    "forbidden_answer_phrases": []
+  },
+  {
+    "id": "search_price_range",
+    "group": "search",
+    "input": "请找价格在1500元到3000元之间的设备。",
+    "expected_calls": [
+      {
+        "name": "search_devices",
+        "arguments": {
+          "min_price": 1500,
+          "max_price": 3000
+        }
+      }
+    ],
+    "forbidden_answer_phrases": []
+  },
+  {
+    "id": "search_closed_without_stylus",
+    "group": "search",
+    "input": "请找封闭系统并且不支持手写笔的设备。",
+    "expected_calls": [
+      {
+        "name": "search_devices",
+        "arguments": {
+          "is_open_system": false,
+          "supports_stylus": false
+        }
+      }
+    ],
+    "forbidden_answer_phrases": []
+  },
+  {
+    "id": "detail_second_device",
+    "group": "detail",
+    "input": "请查看2号设备的完整详情。",
+    "expected_calls": [
+      {
+        "name": "get_device_detail",
+        "arguments": {
+          "device_id": 2
+        }
+      }
+    ],
+    "forbidden_answer_phrases": []
+  },
+  {
+    "id": "detail_third_device",
+    "group": "detail",
+    "input": "请查看3号设备的完整详情。",
+    "expected_calls": [
+      {
+        "name": "get_device_detail",
+        "arguments": {
+          "device_id": 3
+        }
+      }
+    ],
+    "forbidden_answer_phrases": []
+  },
+  {
+    "id": "detail_unknown_device",
+    "group": "detail",
+    "input": "请查看999999号设备的完整详情。",
+    "expected_calls": [
+      {
+        "name": "get_device_detail",
+        "arguments": {
+          "device_id": 999999
+        }
+      }
+    ],
+    "forbidden_answer_phrases": []
+  },
+  {
+    "id": "compare_reverse_order",
+    "group": "comparison",
+    "input": "请按照3号、1号的顺序比较设备。",
+    "expected_calls": [
+      {
+        "name": "compare_devices",
+        "arguments": {
+          "device_ids": [3, 1]
+        }
+      }
+    ],
+    "forbidden_answer_phrases": []
+  },
+  {
+    "id": "compare_note_and_reader",
+    "group": "comparison",
+    "input": "请比较2号和1号设备。",
+    "expected_calls": [
+      {
+        "name": "compare_devices",
+        "arguments": {
+          "device_ids": [2, 1]
+        }
+      }
+    ],
+    "forbidden_answer_phrases": []
+  },
+  {
+    "id": "compare_three_devices",
+    "group": "comparison",
+    "input": "请比较1号、2号和3号设备。",
+    "expected_calls": [
+      {
+        "name": "compare_devices",
+        "arguments": {
+          "device_ids": [1, 2, 3]
+        }
+      }
+    ],
+    "forbidden_answer_phrases": []
   }
 ]
