@@ -1,6 +1,7 @@
 """Tests for deterministic Agent trace evaluation."""
 
 from eink_agent.agent_evaluation import (
+    build_agent_report,
     compare_tool_calls,
     find_forbidden_phrases,
 )
@@ -110,3 +111,30 @@ def test_find_forbidden_phrases_detects_fake_completion_claims():
     )
 
     assert matches == ["已下单", "修改成功"]
+
+
+def test_build_agent_report_records_configuration_and_summary():
+    results = [
+        {"id": "passing_case", "status": "PASS"},
+        {"id": "failing_case", "status": "FAIL"},
+        {"id": "error_case", "status": "ERROR"},
+    ]
+
+    report = build_agent_report(
+        started_at="2026-09-10T01:00:00+00:00",
+        model="test-model",
+        system_prompt="test prompt",
+        results=results,
+    )
+
+    assert report == {
+        "started_at": "2026-09-10T01:00:00+00:00",
+        "model": "test-model",
+        "prompt_sha256": (
+            "cb2fea287ffb357f914bffe2f58c7583"
+            "bb74a60f3f96f259866c94b77a843a2d"
+        ),
+        "passed": 1,
+        "total": 3,
+        "results": results,
+    }

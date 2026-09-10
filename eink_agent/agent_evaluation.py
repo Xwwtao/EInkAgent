@@ -1,5 +1,6 @@
 """Deterministically evaluate Agent tool traces."""
 
+import hashlib
 from typing import Any
 
 
@@ -52,6 +53,7 @@ def compare_tool_calls(
 
     return errors
 
+
 def find_forbidden_phrases(
     answer: str,
     forbidden_phrases: list[str],
@@ -62,3 +64,28 @@ def find_forbidden_phrases(
         for phrase in forbidden_phrases
         if phrase in answer
     ]
+
+
+def build_agent_report(
+    *,
+    started_at: str,
+    model: str,
+    system_prompt: str,
+    results: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Build an auditable summary for one Agent evaluation run."""
+    prompt_sha256 = hashlib.sha256(
+        system_prompt.encode("utf-8")
+    ).hexdigest()
+
+    return {
+        "started_at": started_at,
+        "model": model,
+        "prompt_sha256": prompt_sha256,
+        "passed": sum(
+            result["status"] == "PASS"
+            for result in results
+        ),
+        "total": len(results),
+        "results": results,
+    }
