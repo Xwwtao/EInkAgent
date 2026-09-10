@@ -167,12 +167,46 @@ Only allowlisted tools can execute. Pydantic validates tool arguments before
 they reach SQLite, and the Agent stops after a bounded number of model rounds.
 The demo normally makes at least two paid API requests when a tool is used.
 
-Tool traces are returned in memory and printed by the demo. They are not yet
-persisted to a database or monitoring system.
+The interactive demo prints traces in memory. The separate evaluation runner
+persists sanitized traces to ignored local JSON reports; no traces are stored
+in the application database or an external monitoring system.
 
-A manual run on 2026-09-09 verified that DeepSeek selected
-`get_device_detail` for a single-device request and `compare_devices` for a two-device comparison. This demonstrates tool selection behavior, not an accuracy benchmark.
 
+### Agent evaluation
+
+The live evaluator measures whether the model selects the expected tool and
+arguments, avoids unnecessary database access, and does not claim completion
+of unsupported actions.
+
+After configuring the DeepSeek environment variables, run:
+
+```bash
+python -m examples.evaluate_agent
+```
+
+The 20 human-labeled cases in `evals/agent_cases.json` cover:
+
+- 7 constrained device searches
+- 4 single-device detail requests
+- 4 device comparisons
+- 2 requests that require clarification without tool use
+- 3 unsupported purchase or database mutation requests
+
+A case passes only when its ordered tool calls and arguments match exactly
+and its answer contains no configured unsafe completion phrase. API and
+processing errors remain in the total case count.
+A case passes only when its ordered tool calls and arguments match exactly
+and its answer contains no configured unsafe completion phrase. API and
+processing errors remain in the total case count.
+
+Evaluation reports are saved under `evals/agent_runs/`, which Git ignores.
+Each report records the model name, system-prompt SHA-256 hash, sanitized tool
+calls, answers, error classifications, and overall result. Random tool-call
+IDs and full database results are not persisted.
+
+A manual run on 2026-09-10 passed all 20 cases with `deepseek-v4-flash`.
+This is a small prompt-regression suite for the fictional demo dataset, not an
+independent accuracy benchmark. Model behavior may vary between runs.
 
 ## Requirement evaluation
 
@@ -200,7 +234,6 @@ Reports are saved under `evals/runs/`, which Git ignores. Each report records
 the start time, configured model name, prompt SHA-256 hash, expected and actual
 constraints, and per-case outcomes.
 
-A manual run on 2026-09-05 passed all four cases with `deepseek-v4-flash`.
 This small set includes prompt-guided regression examples and is not an
 independent accuracy benchmark.
 
@@ -253,6 +286,9 @@ python -m pytest
 - `eink_agent/agent_tools.py`：定义模型可见的工具 Schema、白名单和参数校验。
 - `eink_agent/agent.py`：实现有轮数上限的模型—工具循环和执行轨迹。
 - `examples/tool_calling_agent_demo.py`：运行真实 DeepSeek Tool Calling 演示。
+- `eink_agent/agent_evaluation.py`：比较工具轨迹、检查危险声明并构建评测报告。
+- `evals/agent_cases.json`：保存 20 条人工标注的 Agent 行为案例。
+- `examples/evaluate_agent.py`：运行真实 DeepSeek Agent 评测并保存本地报告。
 
 ## 数据设计原则
 
