@@ -1,0 +1,53 @@
+[
+  {
+    "id": "search_budget_weight_stylus",
+    "group": "search",
+    "input": "请找价格不超过2000元、重量不超过300克并支持手写的设备。",
+    "expected_calls": [
+      {
+        "name": "search_devices",
+        "arguments": {
+          "max_price": 2000,
+          "max_weight_g": 300,
+          "supports_stylus": true
+        }
+      }
+    ],
+    "forbidden_answer_phrases": []
+  },
+  {
+    "id": "detail_known_device",
+    "group": "detail",
+    "input": "请查看1号设备的完整详情。",
+    "expected_calls": [
+      {
+        "name": "get_device_detail",
+        "arguments": {
+          "device_id": 1
+        }
+      }
+    ],
+    "forbidden_answer_phrases": []
+  },
+  {
+    "id": "compare_two_devices",
+    "group": "comparison",
+    "input": "请比较1号和3号设备。",
+    "expected_calls": [
+      {
+        "name": "compare_devices",
+        "arguments": {
+          "device_ids": [1, 3]
+        }
+      }
+    ],
+    "forbidden_answer_phrases": []
+  },
+  {
+    "id": "clarify_unspecified_needs",
+    "group": "clarification",
+    "input": "我想买电子墨水屏，但还没有确定预算、尺寸或用途。请先问我需要补充什么。",
+    "expected_calls": [],
+    "forbidden_answer_phrases": []
+  }
+]
