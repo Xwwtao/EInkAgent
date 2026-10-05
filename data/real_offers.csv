@@ -1,9 +1,18 @@
 brand,model,seller,price_amount,currency,product_url,collected_at,is_available
-reMarkable,reMarkable Paper Pro,reMarkable 官方商店,,USD,https://remarkable.com/shop/compare,2026-09-11,1
-reMarkable,reMarkable Paper Pro Move,reMarkable 官方商店,,USD,https://remarkable.com/shop/compare,2026-09-11,1
-reMarkable,reMarkable Paper Pure,reMarkable 官方商店,,USD,https://remarkable.com/shop/compare,2026-09-11,1
-Supernote,A5 X2 Manta,Supernote 官方商店,,USD,https://supernote.com/products/supernote-manta,2026-09-11,1
-Supernote,A6 X2 Nomad,Supernote 官方商店,,USD,https://supernote.com/products/supernote-nomad,2026-09-11,1
-Amazon,Kindle Scribe (3rd Gen),Amazon 官方商店,,USD,https://www.aboutamazon.com/news/devices/new-amazon-kindle-scribe-color,2026-09-11,1
-Amazon,Kindle Scribe Colorsoft,Amazon 官方商店,,USD,https://www.aboutamazon.com/news/devices/new-amazon-kindle-scribe-color,2026-09-11,1
-Amazon,Kindle Scribe Without Front Light,Amazon 官方商店,,USD,https://www.aboutamazon.co.uk/news/devices/new-amazon-kindle-scribe-colour-uk,2026-09-11,1
+reMarkable,reMarkable Paper Pro,reMarkable 官方商店,629,USD,https://remarkable.com/shop,2026-10-05,1
+reMarkable,reMarkable Paper Pro Move,reMarkable 官方商店,449,USD,https://remarkable.com/shop,2026-10-05,1
+reMarkable,reMarkable Paper Pure,reMarkable 官方商店,399,USD,https://remarkable.com/shop,2026-10-05,1
+Supernote,A5 X2 Manta,Supernote 官方商店,505,USD,https://supernote.com/products/supernote-manta,2026-10-05,1
+Supernote,A6 X2 Nomad,Supernote 官方商店,359,USD,https://supernote.com/products/supernote-nomad,2026-10-05,1
+Amazon,Kindle Scribe (3rd Gen),Amazon 官方商店,499.99,USD,https://www.amazon.com/dp/B0DVQQGMCZ?th=1,2026-10-05,1
+Amazon,Kindle Scribe Colorsoft,Amazon 官方商店,629.99,USD,https://www.amazon.com/dp/B0DWRBVDN6?th=1,2026-10-05,1
+Amazon,Kindle Scribe Without Front Light,Amazon 官方商店,429.99,USD,https://www.amazon.com/dp/B0F3BLPFS9?th=1,2026-10-05,1
+iReader,Ocean 5 Pro,iReader官方商店,1799,CNY,https://item.jd.com/100282348720.html,2026-10-05,1
+BOOX,Leaf 5,BOOX官方商店,1749,CNY,https://item.jd.com/10147090674851.html,2026-10-05,1
+BOOX,Note X5,BOOX官方商店,2899,CNY,https://item.jd.com/10191760338879.html,2026-10-05,1
+BOOX,T10C+,BOOX官方商店,3799,CNY,https://item.jd.com/100243981217.html,2026-10-05,1
+BOOX,T13C,BOOX官方商店,5999,CNY,https://item.jd.com/100209359056.html,2026-10-05,1
+Kobo,Libra Colour,Kobo 美国官方商店,259.99,USD,https://ereader.kobo.com/en-us/collections/ereaders,2026-10-05,1
+Kobo,Clara Colour,Kobo 美国官方商店,179.99,USD,https://ereader.kobo.com/en-us/collections/ereaders,2026-10-05,1
+Kobo,Clara BW,Kobo 美国官方商店,159.99,USD,https://ereader.kobo.com/en-us/collections/ereaders,2026-10-05,1
+Kobo,Elipsa 2E,Kobo 美国官方商店,399.99,USD,https://ereader.kobo.com/en-us/collections/ereaders,2026-10-05,1
