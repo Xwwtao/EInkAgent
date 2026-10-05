@@ -1,0 +1,84 @@
+# 001 真实数据层：为什么这样设计
+
+## 问题
+
+项目此前只有 3 台虚构演示设备（`DemoInk` / `ColorLeaf`），
+且 `spec_source_url`、`spec_verified_at` 全部为空。
+结果是：任何"约束满足率""引用覆盖率"都无从计算，
+因为结构化筛选在 2 个品牌 3 行数据上没有区分度，
+而"数据可追溯"这一产品原则在数据里没有落点。
+
+## 两个候选方案
+
+**方案 A：直接把真实数据写进 `seed_demo.py`。**
+改动最小，一条命令即可写入。
+
+**方案 B：真实数据走 CSV（版本控制），由导入脚本写入 SQLite；演示数据保留在 `seed_demo.py`。**
+多一个导入脚本和一个校验层。
+
+## 选择：方案 B
+
+理由：
+
+1. **CSV 可 review、可 diff**。数据库文件（`data/*.db`）被 git 忽略，
+   如果数据只存在库里，就没有任何版本历史，也无法解释"某个参数什么时候被改过"。
+2. **演示数据与真实数据必须分开**。测试需要稳定、离线、无版权的数据，
+   真实数据会随产品更新而变动。混在一起会让测试随外部世界失效。
+3. **导入脚本本身就是数据质量闸门**。校验逻辑（必填来源、日期格式、枚举值、
+   数值范围）放在导入路径上，坏数据进不来，而不是事后靠人眼检查。
+
+## 关键设计决定
+
+- **`devices` 与 `offers` 分表**：规格相对稳定，价格随卖家和时间波动。
+  混在一张表里会导致 "同一台设备因价格变化产生多行规格"。
+- **未知字段存 `NULL`，不猜测**。CSV 中留空即写入 `NULL`。
+  禁止按同系列机型推断参数——模型和脚本都不允许替用户猜。
+- **报价的自然键是"设备 + 卖家 + 采集时间"**，不是"设备"。
+  同一台设备在不同卖家、不同时间点的价格是不同的事实，
+  去重必须保留时间维度（`idx_offers_natural_key`）。
+- **来源与核验时间必填**。`spec_source_url` 必须是非空的 http(s) 链接，
+  `spec_verified_at` 必须是 `YYYY-MM-DD`。缺失即拒绝导入。
+- **导入幂等**：设备按键 `(brand, model)` 更新或插入，
+  报价按键 `(device_id, seller, collected_at)` 跳过已存在记录。
+  重复运行不产生重复行。
+- **跨币种价格必须留痕**：已由 `003-offer-currency.md` 改为保存原价与币种，
+  `price_cny` 由导入脚本按 `data/exchange_rates.csv` 的固定汇率计算。
+
+## 影响文件
+
+- `data/real_devices.csv`、`data/real_offers.csv`：数据源，入库
+- `data/exchange_rates.csv`：跨币种换算率，入库
+- `data_import.py`：校验 + 幂等导入
+- `data_quality.py`：生成质量报告 `data/data_quality_report.md`（入库，作为 README 数字的依据）
+- `tests/test_data_import.py`：导入、幂等、校验失败、报告统计的离线测试
+- `schema.sql`：未改动列名；新增报价唯一索引 `idx_offers_natural_key`
+
+## 验证方式
+
+```bash
+python data_import.py          # 导入，输出新增/更新/跳过数量
+python data_quality.py         # 生成质量报告
+python -m pytest -q            # 离线测试全绿
+```
+
+达标标准（`AGENTS.md` P0）：真实设备 ≥ 20 台、报价 ≥ 40 条、
+来源与核验时间 100% 非空、导入重复运行记录数不变。
+
+## 已知限制
+
+- 规格数据由人工/检索整理，**未经二次人工复核**；
+  `notes` 字段中标注 `[待核验:字段名]` 的条目需要在采用前核对原始页面。
+- **来源质量分层**：reMarkable / Supernote / PocketBook / Kobo 四家来自厂商官方
+  规格页；国产机型（BOOX、iReader、Hanvon、Moan、iFLYTEK）厂商官网为
+  SPA 或图片，只能引用科技媒体页面；**Amazon 商品页无法抓取**，
+  Kindle 的 ppi、重量、存储取自 Wikipedia 规格表，
+  因此这批字段的可信度低于官方来源，已在 `notes` 中逐字段标记。
+- ~~标志位无法表达"未公布"~~：已由 `002-nullable-device-flags.md` 解决，
+  标志位改为可空，`NULL` 表示来源未公布。
+- `is_open_system` 与 `category` 属于口径判断字段（能否安装第三方应用、
+  reader/note/tablet 的边界），不同厂商宣传口径不一致，
+  其中若干取值是从同系列机型推断的，需要人工确认。
+- 报价快照会随时间失效，报告中对超过 30 天的记录单独计数。
+- `mono_ppi` / `color_ppi` 的语义未区分"该机型是否支持彩色"：
+  彩色机型当前把 300 填在 `mono_ppi`、150 填在 `color_ppi`，
+  需要一次口径澄清（或新增 `mono_ppi` 与彩色 PPI 的显式字段）才能避免误读。

@@ -68,13 +68,14 @@ def seed_demo_data() -> None:
                 connection.execute(
                     """
                     INSERT INTO offers (
-                        device_id, price_cny, seller, product_url,
-                        collected_at, is_available
-                    ) VALUES (?, ?, ?, ?, ?, ?)
+                        device_id, price_cny, price_amount_minor, currency,
+                        seller, product_url, collected_at, is_available
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
-                        device["id"], demo_prices[key], "虚构演示商店",
-                        None, today, 1,
+                        device["id"], demo_prices[key],
+                        demo_prices[key] * 100, "CNY",
+                        "虚构演示商店", None, today, 1,
                     ),
                 )
 
