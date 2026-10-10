@@ -5,7 +5,6 @@ import os
 from openai import OpenAI
 
 from eink_agent.agent import run_agent
-from seed_demo import seed_demo_data
 
 
 def main() -> None:
@@ -15,8 +14,6 @@ def main() -> None:
     if not user_text:
         print("需求不能为空。")
         return
-
-    seed_demo_data()
 
     with OpenAI(
         api_key=os.environ["DEEPSEEK_API_KEY"],
@@ -44,7 +41,10 @@ def main() -> None:
         print(f"  参数：{arguments}")
         print(f"  调用 ID：{trace['tool_call_id']}")
         print(f"  返回记录数：{trace['result_count']}")
+        if trace["status"] == "error":
+            print(f"  错误：{trace['error']['type']}")
 
+    print(f"\n运行状态：{result.status}")
     print("\nEInkAgent 回答：")
     print(result.answer)
 
