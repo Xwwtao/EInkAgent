@@ -23,6 +23,14 @@ from eink_agent.answer_guard import find_unexecuted_action_claims
 # a row means it is not converging, and each extra round costs a model call.
 MAX_CONSECUTIVE_TOOL_FAILURES = 2
 
+# About five conversation turns. Every extra message costs tokens and latency,
+# and device-buying conversations rarely need more context than this.
+MAX_HISTORY_MESSAGES = 10
+
+# Clients may replay what the user and the assistant said, but never system
+# instructions or tool results, which they could forge.
+HISTORY_ROLES = ("user", "assistant")
+
 # Validation messages beyond this are dropped to keep tool messages short.
 MAX_REPORTED_VALIDATION_ERRORS = 5
 
@@ -192,14 +200,32 @@ def _run_tool_call(tool_call: Any) -> tuple[dict[str, Any], dict[str, Any]]:
     return entry, message
 
 
+def _recent_history(history: list[dict[str, str]]) -> list[dict[str, str]]:
+    """Validate earlier turns and keep only the most recent ones."""
+    for message in history:
+        if message.get("role") not in HISTORY_ROLES:
+            raise ValueError(f"history role must be one of {HISTORY_ROLES}")
+        if not str(message.get("content", "")).strip():
+            raise ValueError("history content must not be empty")
+
+    return [
+        {"role": message["role"], "content": message["content"]}
+        for message in history[-MAX_HISTORY_MESSAGES:]
+    ]
+
+
 def run_agent(
     user_text: str,
     *,
     client: OpenAI,
     model: str,
+    history: list[dict[str, str]] | None = None,
     max_rounds: int = 5,
 ) -> AgentResult:
     """Run a bounded model-tool-model conversation.
+
+    ``history`` holds earlier user and assistant turns, oldest first; the
+    caller keeps it, so the server stores nothing between requests.
 
     Tool failures never raise: they are returned to the model as structured
     errors. Errors from the model API itself still propagate to the caller.
@@ -210,6 +236,7 @@ def run_agent(
 
     messages: list[Any] = [
         {"role": "system", "content": SYSTEM_PROMPT},
+        *_recent_history(history or []),
         {"role": "user", "content": normalized_text},
     ]
 

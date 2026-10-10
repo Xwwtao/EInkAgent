@@ -4,6 +4,8 @@
 
 import pytest
 
+from database import get_connection
+
 from device_repository import (
     compare_devices,
     get_device_detail,
@@ -149,3 +151,58 @@ def test_search_devices_keyword_treats_like_wildcards_literally():
 def test_search_devices_rejects_blank_keyword():
     with pytest.raises(ValueError, match="keyword"):
         search_devices(keyword="   ")
+
+
+def _add_offer(model: str, price: int, seller: str, collected_at: str, available: int = 1) -> None:
+    with get_connection() as connection:
+        device_id = connection.execute(
+            "SELECT id FROM devices WHERE model = ?", (model,)
+        ).fetchone()[0]
+        connection.execute(
+            """
+            INSERT INTO offers (
+                device_id, price_cny, price_amount_minor, currency,
+                seller, product_url, collected_at, is_available
+            ) VALUES (?, ?, ?, 'CNY', ?, ?, ?, ?)
+            """,
+            (device_id, price, price * 100, seller, f"https://example.com/{seller}", collected_at, available),
+        )
+
+
+def test_search_results_include_where_the_lowest_price_came_from():
+    _add_offer("Reader 6", 799, "低价卖家", "2026-10-01")
+
+    device = search_devices(keyword="Reader 6")[0]
+
+    assert device["lowest_price_cny"] == 799
+    assert device["price_seller"] == "低价卖家"
+    assert device["price_collected_at"] == "2026-10-01"
+    assert device["price_url"] == "https://example.com/低价卖家"
+
+
+def test_lowest_price_ignores_unavailable_offers():
+    _add_offer("Reader 6", 1, "缺货卖家", "2026-10-01", available=0)
+
+    device = search_devices(keyword="Reader 6")[0]
+
+    assert device["lowest_price_cny"] == 899
+    assert device["price_seller"] == "虚构演示商店"
+
+
+def test_equal_lowest_prices_use_the_most_recent_snapshot():
+    _add_offer("Reader 6", 899, "新卖家", "2099-01-01")
+
+    device = get_device_detail(search_devices(keyword="Reader 6")[0]["id"])
+
+    assert device["price_seller"] == "新卖家"
+    assert device["price_collected_at"] == "2099-01-01"
+
+
+def test_device_without_offers_has_no_price_source():
+    with get_connection() as connection:
+        connection.execute("DELETE FROM offers")
+
+    device = search_devices(keyword="Reader 6")[0]
+
+    assert device["lowest_price_cny"] is None
+    assert device["price_seller"] is None
