@@ -32,7 +32,7 @@ iReader,Ocean 5 Pro,reader,2025,7,0,300,,,,,,,,64,185,7吋黑白阅读本 [待�
 iReader,Smart 6 Pro,note,2026,10.3,0,300,,SmartOS,,1,1,1,,128,398,10.3吋黑白手写本 基于安卓的SmartOS [待核验:is_open_system],https://www.ithome.com/0/939/603.htm,2026-10-05
 iReader,Smart 6C Pro,note,2026,10.3,1,300,150,,,1,1,1,,128,396,10.3吋彩色手写本 Kaleido 3,https://www.ithome.com/0/939/605.htm,2026-10-05
 iReader,Air 3 Pro 泊渊,reader,2026,8.2,0,293,,SmartOS 4.0,,,1,1,,64,270,8.2吋黑白阅读本 带阅读灯版,https://www.ithome.com/1/005/227.htm,2026-10-05
-iReader,Tango2S,reader,2026,5.84,0,300,,,,,,,,64,147,5.84吋手机造型阅读本,https://www.ithome.com/0/999/910.htm,2026-10-05
+iReader,Tango 2S,reader,2026,5.84,0,300,,,,,,,,64,147,5.84吋手机造型阅读本,https://www.ithome.com/0/999/910.htm,2026-10-05
 BOOX,Note Air6 C,note,2026,10.3,1,,,Android 16,1,1,1,1,,64,440,10.3吋彩色手写本 分辨率2480×1860/1240×930 [待核验:mono_ppi;color_ppi],https://www.ithome.com/1/003/220.htm,2026-10-05
 BOOX,Note X6,note,2026,10.3,0,300,,Android 16,,1,,,,128,365,10.3吋黑白办公本 标配手写笔 [待核验:has_front_light],https://www.ithome.com/0/957/218.htm,2026-10-05
 BOOX,Palma 3,reader,2026,6.13,0,,,Android 16,1,1,,,,,,6.13吋手机造型阅读器 Carta 1200 [待核验:storage_gb;weight_g;has_front_light],https://www.ithome.com/1/003/314.htm,2026-10-05
@@ -45,6 +45,6 @@ Amazon,Kindle (2026),reader,2026,6,0,300,,,,,1,0,0,16,140,6吋黑白阅读器 20
 Amazon,Kindle Aluminum (2026),reader,2026,6,0,300,,,,,1,0,0,32,162,6吋黑白阅读器 铝合金背壳 无广告,https://www.amazon.com/dp/B0FZDCHT4J,2026-10-05
 Amazon,Kindle Paperwhite (2026),reader,2026,7,0,300,,,,,1,1,1,16,204,7吋黑白阅读器 IPX8防水,https://www.amazon.com/dp/B0GHTD6Q5C,2026-10-05
 Amazon,Kindle Paperwhite Signature Edition (2026),reader,2026,7,0,300,,,,,1,1,1,32,229,7吋黑白阅读器 自动调光 铝合金背壳,https://www.amazon.com/dp/B0GV621HD7,2026-10-05
-Amazon,Kindle Colorsoft (2026),reader,2026,7,1,300,150,,,,,1,1,16,204,7吋彩色阅读器 IPX8防水 [待核验:has_front_light],https://www.amazon.com/dp/B0GHT5P56N,2026-10-05
+Amazon,Kindle Colorsoft (2026),reader,2026,7,1,300,150,,,,1,1,1,16,204,7吋彩色阅读器 IPX8防水,https://www.amazon.com/dp/B0GHT5P56N,2026-10-05
 Amazon,Kindle Colorsoft Signature Edition (2026),reader,2026,7,1,300,150,,,,1,1,1,32,229,7吋彩色阅读器 自动调光 铝合金背壳,https://www.amazon.com/dp/B0GV5WJH35,2026-10-05
 iReader,Ocean 4 Turbo 2025,reader,2025,7,0,300,,,0,0,1,1,0,64,179,7吋黑白阅读本 [待核验:has_warm_light;is_open_system],https://m.ithome.com/html/840698.htm,2026-09-11
