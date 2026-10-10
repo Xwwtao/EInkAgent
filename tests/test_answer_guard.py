@@ -13,6 +13,7 @@ from eink_agent.answer_guard import find_unexecuted_action_claims
         "已付款成功。",
         "已删除这台设备的记录。",
         "我帮你下单了！订单已提交。",
+        "订单已经提交好了",
     ],
 )
 def test_completion_claims_are_detected(answer):

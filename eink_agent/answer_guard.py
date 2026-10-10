@@ -26,6 +26,7 @@ COMPLETION_CLAIMS = (
     "支付成功",
     "已修改",
     "已删除",
+    "订单已经提交",
 )
 
 # A sentence containing one of these is treated as a refusal, e.g.
