@@ -1,0 +1,50 @@
+brand,model,category,release_year,screen_size_inches,is_color,mono_ppi,color_ppi,operating_system,is_open_system,supports_stylus,has_front_light,has_warm_light,is_waterproof,storage_gb,weight_g,notes,spec_source_url,spec_verified_at
+reMarkable,reMarkable Paper Pro,note,2024,11.8,1,229,,reMarkable OS,0,1,1,0,0,64,525,11.8吋彩色旗舰 带阅读灯 [待核验:color_ppi],https://remarkable.com/shop/compare,2026-09-11
+reMarkable,reMarkable Paper Pro Move,note,2025,7.3,1,264,,reMarkable OS,0,1,1,0,0,64,230,7.3吋彩色便携 随身会议 [待核验:color_ppi],https://remarkable.com/shop/compare,2026-09-11
+reMarkable,reMarkable Paper Pure,note,2026,10.3,0,226,,reMarkable OS,0,1,0,0,0,32,360,10.3吋黑白主力 无前光 [待核验:weight_g],https://remarkable.com/shop/compare,2026-09-11
+Supernote,A5 X2 Manta,note,2024,10.7,0,300,,Chauvet (Android 11),0,1,0,0,0,32,375,10.7吋模块化可维修 无前光 [待核验:weight_g],https://supernote.com/products/supernote-manta,2026-09-11
+Supernote,A6 X2 Nomad,note,2023,7.8,0,300,,Chauvet (Android 11),0,1,0,0,0,32,266,7.8吋便携黑白笔记 无前光,https://supernote.com/products/supernote-nomad,2026-09-11
+iReader,Smart 5 Pro,note,2024,10.3,0,300,,SmartOS 2.2,1,1,1,1,0,128,,10.3吋黑白手写本 [待核验:supports_stylus;weight_g],https://m.ithome.com/html/784967.htm,2026-09-11
+iReader,Smart 5C,note,2024,10.3,1,300,150,,1,1,1,1,0,128,396,10.3吋彩色手写本 [待核验:is_open_system;operating_system],https://m.ithome.com/html/798991.htm,2026-09-11
+BOOX,Leaf 5,reader,2025,7,0,300,,,1,0,1,1,0,64,175,7吋黑白阅读本 [待核验:is_open_system;has_warm_light],https://m.ithome.com/html/844083.htm,2026-09-11
+BOOX,Note X5,note,2025,10.3,0,300,,,1,1,1,1,0,64,,10.3吋黑白手写本 [待核验:is_open_system;weight_g],https://m.ithome.com/html/861049.htm,2026-09-11
+BOOX,T10C+,tablet,2026,10.3,1,300,150,Android 13,1,1,1,1,0,128,420,10.3吋彩墨生产力平板 [待核验:is_open_system;supports_stylus],https://m.ithome.com/html/932036.htm,2026-09-11
+BOOX,T13C,tablet,2025,13.3,1,300,,,1,1,1,1,0,128,,13.3吋彩墨旗舰办公本 [待核验:is_open_system;has_front_light;weight_g],https://m.ithome.com/html/844211.htm,2026-09-11
+Hanvon,N10 Pro 二代,note,2025,10.3,0,300,,Android 14,1,1,0,0,0,128,409,10.3吋减屏层手写本 [待核验:has_front_light;is_open_system],https://m.ithome.com/html/842106.htm,2026-09-11
+Moan,迷你阅 Ultra,reader,2026,6.13,1,300,150,,0,0,1,1,0,64,145,手机型彩墨阅读器 [待核验:operating_system;is_open_system],https://m.ithome.com/html/923976.htm,2026-09-11
+iFLYTEK,智能办公本 X5,note,2025,10.65,0,300,,,1,1,1,1,0,64,355,10.65吋离线AI办公本 [待核验:has_front_light;operating_system],https://news.ifeng.com/c/8lEWhJGSVWT,2026-09-11
+Kobo,Clara BW,reader,2024,6.0,0,,,,0,0,1,1,1,16,174,6吋黑白便携阅读器 [待核验:mono_ppi;operating_system],https://ereader.kobo.com/en-us/products/kobo-clara-bw,2026-09-11
+Kobo,Clara Colour,reader,2024,6.0,1,300,150,,0,0,1,1,1,16,174,6吋彩色便携阅读器 [待核验:operating_system],https://ereader.kobo.com/en-us/products/kobo-clara-colour,2026-09-11
+Kobo,Libra Colour,reader,2024,7.0,1,300,150,,0,1,1,1,1,32,200,7吋彩屏手写阅读器 [待核验:operating_system],https://ereader.kobo.com/en-us/products/kobo-libra-colour,2026-09-11
+Kobo,Elipsa 2E,note,2023,10.3,0,227,,,0,1,1,1,0,32,390,10.3吋手写笔记阅读器 [待核验:operating_system],https://ereader.kobo.com/en-us/products/kobo-elipsa-2e,2026-09-11
+PocketBook,Verse Pro,reader,2023,6.0,0,300,,Linux 3.10.65,0,0,1,1,1,16,186,6吋防水有声阅读器,https://pocketbook.ch/en-ch/catalog/e-readers/pocketbook-verse-pro-azure-ch,2026-09-11
+PocketBook,Era Color,reader,2024,7.0,1,300,150,Linux 4.9.56,0,0,1,1,1,32,235,7吋彩屏有声阅读器,https://pocketbook.ch/en-ch/catalog/color-e-readers/pocketbook-era-color-ch,2026-09-11
+PocketBook,InkPad One,note,2026,10.3,0,226,,Linux 4.9.56,0,1,1,1,0,32,400,10.3吋手写电子笔记 [待核验:is_waterproof],https://pocketbook.ch/en-ch/catalog/e-notes/pocketbook-inkpad-one-ch,2026-09-11
+Amazon,Kindle (11th Gen 2024),reader,2024,6.0,0,300,,,0,0,1,0,0,16,158,入门款6吋无防水 [待核验:has_warm_light;mono_ppi;storage_gb;weight_g;operating_system],https://www.aboutamazon.com/news/devices/new-kindle-color-scribe-paperwhite-entry,2026-09-11
+Amazon,Kindle Paperwhite (12th Gen),reader,2024,7.0,0,300,,,0,0,1,,1,16,211,主力阅读款7吋防水 [待核验:mono_ppi;has_warm_light;storage_gb;weight_g;operating_system],https://www.aboutamazon.com/news/devices/new-kindle-color-scribe-paperwhite-entry,2026-09-11
+Amazon,Kindle Paperwhite Signature Edition (12th Gen),reader,2024,7.0,0,300,,,0,0,1,,1,32,214,签名版32GB无线充电 [待核验:mono_ppi;has_warm_light;weight_g;operating_system],https://www.aboutamazon.com/news/devices/new-kindle-color-scribe-paperwhite-entry,2026-09-11
+Amazon,Kindle Colorsoft (16 GB),reader,2025,7.0,1,300,150,,0,0,1,1,1,16,215,彩色入门款暖光16GB [待核验:screen_size_inches;mono_ppi;color_ppi;release_year;storage_gb;weight_g;operating_system],https://www.aboutamazon.co.uk/news/devices/new-kindle-colorsoft-16gb-kids,2026-09-11
+Amazon,Kindle Colorsoft Signature Edition,reader,2024,7.0,1,300,150,,0,0,1,,1,32,219,彩色签名版32GB防水 [待核验:mono_ppi;color_ppi;has_warm_light;weight_g;operating_system],https://www.aboutamazon.com/news/devices/kindle-color-specs-price-announce,2026-09-11
+Amazon,Kindle Scribe (3rd Gen),note,2025,11.0,0,,,,0,1,1,,0,32,400,手写旗舰11吋400g [待核验:mono_ppi;has_warm_light;is_waterproof;storage_gb;weight_g;operating_system],https://www.aboutamazon.com/news/devices/new-amazon-kindle-scribe-color,2026-09-11
+Amazon,Kindle Scribe Without Front Light,note,2025,11.0,0,,,,0,1,0,0,0,16,,无前光手写版16GB [待核验:screen_size_inches;mono_ppi;weight_g;is_waterproof;storage_gb;operating_system],https://www.aboutamazon.co.uk/news/devices/new-amazon-kindle-scribe-colour-uk,2026-09-11
+Amazon,Kindle Scribe Colorsoft,note,2025,11.0,1,300,150,,0,1,1,,0,32,400,彩色手写旗舰11吋 [待核验:mono_ppi;color_ppi;has_warm_light;is_waterproof;storage_gb;weight_g;operating_system],https://www.aboutamazon.com/news/devices/new-amazon-kindle-scribe-color,2026-09-11
+iReader,Ocean 5 Pro,reader,2025,7,0,300,,,,,,,,64,185,7吋黑白阅读本 [待核验:标志位来源未说明],https://www.ithome.com/0/890/096.htm,2026-10-05
+iReader,Smart 6 Pro,note,2026,10.3,0,300,,SmartOS,,1,1,1,,128,398,10.3吋黑白手写本 基于安卓的SmartOS [待核验:is_open_system],https://www.ithome.com/0/939/603.htm,2026-10-05
+iReader,Smart 6C Pro,note,2026,10.3,1,300,150,,,1,1,1,,128,396,10.3吋彩色手写本 Kaleido 3,https://www.ithome.com/0/939/605.htm,2026-10-05
+iReader,Air 3 Pro 泊渊,reader,2026,8.2,0,293,,SmartOS 4.0,,,1,1,,64,270,8.2吋黑白阅读本 带阅读灯版,https://www.ithome.com/1/005/227.htm,2026-10-05
+iReader,Tango 2S,reader,2026,5.84,0,300,,,,,,,,64,147,5.84吋手机造型阅读本,https://www.ithome.com/0/999/910.htm,2026-10-05
+BOOX,Note Air6 C,note,2026,10.3,1,,,Android 16,1,1,1,1,,64,440,10.3吋彩色手写本 分辨率2480×1860/1240×930 [待核验:mono_ppi;color_ppi],https://www.ithome.com/1/003/220.htm,2026-10-05
+BOOX,Note X6,note,2026,10.3,0,300,,Android 16,,1,,,,128,365,10.3吋黑白办公本 标配手写笔 [待核验:has_front_light],https://www.ithome.com/0/957/218.htm,2026-10-05
+BOOX,Palma 3,reader,2026,6.13,0,,,Android 16,1,1,,,,,,6.13吋手机造型阅读器 Carta 1200 [待核验:storage_gb;weight_g;has_front_light],https://www.ithome.com/1/003/314.htm,2026-10-05
+BOOX,Leaf5+,reader,,7,0,300,,,,1,1,1,,64,192,7吋黑白阅读本 实体翻页键 [待核验:release_year],https://www.ithome.com/0/954/169.htm,2026-10-05
+Hanvon,N10 Pro 三代,note,2026,10.3,0,300,,Android 14,1,1,0,,,128,403,10.3吋减层屏手写本 无导光板,https://www.ithome.com/0/957/879.htm,2026-10-05
+Hanvon,N6 Pro,note,2026,6,0,,,,,1,,,,64,189,6吋黑白手写本 分辨率1448×1072,https://www.ithome.com/0/990/998.htm,2026-10-05
+Hanvon,Clear7C,reader,2026,7,1,300,150,Android 14,,,,,,64,175,7吋彩色阅读器 Kaleido 3 实体翻页键,https://www.ithome.com/0/942/771.htm,2026-10-05
+Hanvon,Clear6 Pro 二代,reader,2026,6,0,300,,Android,1,,,,,64,168,6吋黑白阅读器 开放安卓,https://www.ithome.com/1/000/425.htm,2026-10-05
+Amazon,Kindle (2026),reader,2026,6,0,300,,,,,1,0,0,16,140,6吋黑白阅读器 2026款,https://www.amazon.com/dp/B0FXJ8VZ39,2026-10-05
+Amazon,Kindle Aluminum (2026),reader,2026,6,0,300,,,,,1,0,0,32,162,6吋黑白阅读器 铝合金背壳 无广告,https://www.amazon.com/dp/B0FZDCHT4J,2026-10-05
+Amazon,Kindle Paperwhite (2026),reader,2026,7,0,300,,,,,1,1,1,16,204,7吋黑白阅读器 IPX8防水,https://www.amazon.com/dp/B0GHTD6Q5C,2026-10-05
+Amazon,Kindle Paperwhite Signature Edition (2026),reader,2026,7,0,300,,,,,1,1,1,32,229,7吋黑白阅读器 自动调光 铝合金背壳,https://www.amazon.com/dp/B0GV621HD7,2026-10-05
+Amazon,Kindle Colorsoft (2026),reader,2026,7,1,300,150,,,,1,1,1,16,204,7吋彩色阅读器 IPX8防水,https://www.amazon.com/dp/B0GHT5P56N,2026-10-05
+Amazon,Kindle Colorsoft Signature Edition (2026),reader,2026,7,1,300,150,,,,1,1,1,32,229,7吋彩色阅读器 自动调光 铝合金背壳,https://www.amazon.com/dp/B0GV5WJH35,2026-10-05
+iReader,Ocean 4 Turbo 2025,reader,2025,7,0,300,,,0,0,1,1,0,64,179,7吋黑白阅读本 [待核验:has_warm_light;is_open_system],https://m.ithome.com/html/840698.htm,2026-09-11

@@ -1,0 +1,42 @@
+brand,model,seller,price_amount,currency,product_url,collected_at,is_available
+reMarkable,reMarkable Paper Pro,reMarkable 官方商店,629,USD,https://remarkable.com/shop,2026-10-05,1
+reMarkable,reMarkable Paper Pro Move,reMarkable 官方商店,449,USD,https://remarkable.com/shop,2026-10-05,1
+reMarkable,reMarkable Paper Pure,reMarkable 官方商店,399,USD,https://remarkable.com/shop,2026-10-05,1
+Supernote,A5 X2 Manta,Supernote 官方商店,505,USD,https://supernote.com/products/supernote-manta,2026-10-05,1
+Supernote,A6 X2 Nomad,Supernote 官方商店,359,USD,https://supernote.com/products/supernote-nomad,2026-10-05,1
+Amazon,Kindle Scribe (3rd Gen),Amazon 官方商店,499.99,USD,https://www.amazon.com/dp/B0DVQQGMCZ,2026-10-05,1
+Amazon,Kindle Scribe Colorsoft,Amazon 官方商店,629.99,USD,https://www.amazon.com/dp/B0DWRBVDN6,2026-10-05,1
+Amazon,Kindle Scribe Without Front Light,Amazon 官方商店,429.99,USD,https://www.amazon.com/dp/B0F3BLPFS9,2026-10-05,1
+iReader,Ocean 5 Pro,iReader官方商店,1799,CNY,https://item.jd.com/100282348720.html,2026-10-05,1
+BOOX,Leaf 5,BOOX官方商店,1749,CNY,https://item.jd.com/10147090674851.html,2026-10-05,1
+BOOX,Note X5,BOOX官方商店,2899,CNY,https://item.jd.com/10191760338879.html,2026-10-05,1
+BOOX,T10C+,BOOX官方商店,3799,CNY,https://item.jd.com/100243981217.html,2026-10-05,1
+BOOX,T13C,BOOX官方商店,5999,CNY,https://item.jd.com/100209359056.html,2026-10-05,1
+Kobo,Libra Colour,Kobo 美国官方商店,259.99,USD,https://ereader.kobo.com/en-us/collections/ereaders,2026-10-05,1
+Kobo,Clara Colour,Kobo 美国官方商店,179.99,USD,https://ereader.kobo.com/en-us/collections/ereaders,2026-10-05,1
+Kobo,Clara BW,Kobo 美国官方商店,159.99,USD,https://ereader.kobo.com/en-us/collections/ereaders,2026-10-05,1
+Kobo,Elipsa 2E,Kobo 美国官方商店,399.99,USD,https://ereader.kobo.com/en-us/collections/ereaders,2026-10-05,1
+Amazon,Kindle (2026),Amazon 官方商店,169.99,USD,https://www.amazon.com/dp/B0H964GJMD,2026-10-10,1
+Amazon,Kindle Aluminum (2026),Amazon 官方商店,189.99,USD,https://www.amazon.com/dp/B0FZDCHT4J,2026-10-10,1
+Amazon,Kindle Paperwhite (2026),Amazon 官方商店,219.99,USD,https://www.amazon.com/dp/B0H961CQ8T,2026-10-10,1
+Amazon,Kindle Paperwhite Signature Edition (2026),Amazon 官方商店,249.99,USD,https://www.amazon.com/dp/B0GV621HD7,2026-10-10,1
+Amazon,Kindle Colorsoft (2026),Amazon 官方商店,289.99,USD,https://www.amazon.com/dp/B0GHT5P56N,2026-10-10,1
+Amazon,Kindle Colorsoft Signature Edition (2026),Amazon 官方商店,319.99,USD,https://www.amazon.com/dp/B0GV5WJH35,2026-10-10,1
+iReader,Smart 6 Pro,iReader官方商店,3499,CNY,https://item.jd.com/100353311132.html,2026-10-10,1
+iReader,Smart 6C Pro,iReader官方商店,3699,CNY,https://item.jd.com/100264895443.html,2026-10-10,1
+iReader,Air 3 Pro 泊渊,iReader官方商店,2799,CNY,https://item.jd.com/10235108982365.html,2026-10-10,1
+iReader,Tango 2S,iReader官方商店,1799,CNY,https://item.jd.com/100408096312.html,2026-10-10,1
+BOOX,Note X6,BOOX官方商店,3299,CNY,https://item.jd.com/100269918419.html,2026-10-10,1
+BOOX,Leaf5+,BOOX官方商店,1899,CNY,https://item.jd.com/100386378192.html,2026-10-10,1
+Hanvon,N10 Pro 二代,Hanvon官方商店,2999,CNY,https://item.jd.com/100198675668.html,2026-10-10,1
+Hanvon,N10 Pro 三代,Hanvon官方商店,3098,CNY,https://item.jd.com/100269270835.html,2026-10-10,1
+Hanvon,N6 Pro,Hanvon官方商店,2198,CNY,https://item.jd.com/100392771502.html,2026-10-10,1
+Hanvon,Clear7C,Hanvon官方商店,1899,CNY,https://item.jd.com/100257956211.html,2026-10-10,1
+Hanvon,Clear6 Pro 二代,Hanvon官方商店,1148,CNY,https://item.jd.com/100407989790.html,2026-10-10,1
+BOOX,Note Air6 C,BOOX美国官方商店,579.99,USD,https://shop.boox.com/products/noteair6c,2026-10-10,1
+BOOX,Palma 3,BOOX美国官方商店,339.99,USD,https://shop.boox.com/products/palma3,2026-10-10,0
+iFLYTEK,智能办公本 X5,科大讯飞官方商店,4999,CNY,https://item.jd.com/100255966280.html,2026-10-10,1
+Moan,迷你阅 Ultra,墨案官方商店,2199,CNY,https://item.jd.com/100317755692.html,2026-10-10,1
+PocketBook,Verse Pro,PocketBook美亚,189,USD,https://www.amazon.com/dp/B0CGVXN52X,2026-10-10,1
+PocketBook,Era Color,PocketBook官方商店,1399,CNY,https://item.jd.com/10129721304037.html,2026-10-10,1
+PocketBook,InkPad One,PocketBook美亚,359,USD,https://www.amazon.com/dp/B0GMXTXP6C,2026-10-10,1
