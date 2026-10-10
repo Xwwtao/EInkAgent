@@ -17,11 +17,22 @@ from eink_agent.agent_tools import (
     execute_tool,
     tool_names,
 )
-from eink_agent.answer_guard import find_unexecuted_action_claims
+from eink_agent.answer_guard import (
+    find_internal_field_names,
+    find_unexecuted_action_claims,
+)
 
 # One failure gives the model a chance to correct itself; a second failure in
 # a row means it is not converging, and each extra round costs a model call.
 MAX_CONSECUTIVE_TOOL_FAILURES = 2
+
+# About five conversation turns. Every extra message costs tokens and latency,
+# and device-buying conversations rarely need more context than this.
+MAX_HISTORY_MESSAGES = 10
+
+# Clients may replay what the user and the assistant said, but never system
+# instructions or tool results, which they could forge.
+HISTORY_ROLES = ("user", "assistant")
 
 # Validation messages beyond this are dropped to keep tool messages short.
 MAX_REPORTED_VALIDATION_ERRORS = 5
@@ -38,10 +49,16 @@ BLOCKED_ANSWER = (
     "不能下单、付款或修改任何数据。"
 )
 
-REWRITE_INSTRUCTION = (
+CLAIM_REWRITE_INSTRUCTION = (
     "Your answer claims an action that was never executed ({claims}). "
     "EInkAgent cannot place orders, pay, or modify data. Rewrite the answer "
     "using only the tool results, and state the limitation if relevant."
+)
+
+FIELD_NAME_REWRITE_INSTRUCTION = (
+    "Your answer shows internal field names ({fields}). Rewrite it in plain "
+    "language for the user, e.g. say 'closed system' instead of "
+    "is_open_system=0, and keep every fact unchanged."
 )
 
 SYSTEM_PROMPT = (
@@ -55,8 +72,10 @@ SYSTEM_PROMPT = (
     "the limitation. If a request lacks sufficient constraints or device IDs, "
     "ask a clarifying question without calling tools. "
     "Base device claims only on tool results. A null field means the source "
-    "did not publish it: say it is unknown and never infer it. Prices are "
-    "lowest_price_cny snapshots from specific sellers and dates; overseas "
+    "did not publish it: say it is unknown and never infer it. Never show "
+    "field names, raw 0/1 flags or null to the user; describe them in plain "
+    "language. Prices are lowest-price snapshots from the seller and date "
+    "returned with each device; overseas "
     "prices are converted from USD at a fixed rate and are reference prices "
     "only. If a tool returns an error, correct the arguments and try again, "
     "or explain the problem to the user. Answer in the user's language."
@@ -192,14 +211,42 @@ def _run_tool_call(tool_call: Any) -> tuple[dict[str, Any], dict[str, Any]]:
     return entry, message
 
 
+def _rewrite_instruction(claims: list[str], field_names: list[str]) -> str:
+    """Explain every problem found in an answer in one rewrite request."""
+    parts = []
+    if claims:
+        parts.append(CLAIM_REWRITE_INSTRUCTION.format(claims="、".join(claims)))
+    if field_names:
+        parts.append(FIELD_NAME_REWRITE_INSTRUCTION.format(fields=", ".join(field_names)))
+    return " ".join(parts)
+
+
+def _recent_history(history: list[dict[str, str]]) -> list[dict[str, str]]:
+    """Validate earlier turns and keep only the most recent ones."""
+    for message in history:
+        if message.get("role") not in HISTORY_ROLES:
+            raise ValueError(f"history role must be one of {HISTORY_ROLES}")
+        if not str(message.get("content", "")).strip():
+            raise ValueError("history content must not be empty")
+
+    return [
+        {"role": message["role"], "content": message["content"]}
+        for message in history[-MAX_HISTORY_MESSAGES:]
+    ]
+
+
 def run_agent(
     user_text: str,
     *,
     client: OpenAI,
     model: str,
+    history: list[dict[str, str]] | None = None,
     max_rounds: int = 5,
 ) -> AgentResult:
     """Run a bounded model-tool-model conversation.
+
+    ``history`` holds earlier user and assistant turns, oldest first; the
+    caller keeps it, so the server stores nothing between requests.
 
     Tool failures never raise: they are returned to the model as structured
     errors. Errors from the model API itself still propagate to the caller.
@@ -210,6 +257,7 @@ def run_agent(
 
     messages: list[Any] = [
         {"role": "system", "content": SYSTEM_PROMPT},
+        *_recent_history(history or []),
         {"role": "user", "content": normalized_text},
     ]
 
@@ -240,20 +288,24 @@ def run_agent(
                 return AgentResult(DEGRADED_ANSWER, tool_trace, "degraded")
 
             claims = find_unexecuted_action_claims(answer)
-            if not claims:
+            field_names = find_internal_field_names(answer)
+            if not claims and not field_names:
                 return AgentResult(answer, tool_trace)
 
             if rewrite_requested:
-                return AgentResult(BLOCKED_ANSWER, tool_trace, "blocked")
+                # A false completion claim misleads the user and is blocked;
+                # a leftover field name is only awkward wording, so the
+                # answer is kept.
+                if claims:
+                    return AgentResult(BLOCKED_ANSWER, tool_trace, "blocked")
+                return AgentResult(answer, tool_trace)
 
             rewrite_requested = True
             messages.append({"role": "assistant", "content": answer})
             messages.append(
                 {
                     "role": "user",
-                    "content": REWRITE_INSTRUCTION.format(
-                        claims="、".join(claims)
-                    ),
+                    "content": _rewrite_instruction(claims, field_names),
                 }
             )
             continue

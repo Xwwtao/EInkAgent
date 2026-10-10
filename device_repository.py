@@ -4,31 +4,44 @@ from typing import Any
 
 from database import get_connection
 
-BASE_QUERY = """
+# The cheapest available offer per device, with where and when it was seen.
+# Equal prices prefer the most recent snapshot.
+LOWEST_PRICE_JOIN = """
+LEFT JOIN (
+    SELECT
+        device_id,
+        price_cny AS lowest_price_cny,
+        seller AS price_seller,
+        collected_at AS price_collected_at,
+        product_url AS price_url,
+        ROW_NUMBER() OVER (
+            PARTITION BY device_id
+            ORDER BY price_cny, collected_at DESC, id
+        ) AS price_rank
+    FROM offers
+    WHERE is_available = 1
+) AS prices ON prices.device_id = d.id AND prices.price_rank = 1
+"""
+
+PRICE_COLUMNS = """
+    prices.lowest_price_cny, prices.price_seller,
+    prices.price_collected_at, prices.price_url
+"""
+
+BASE_QUERY = f"""
 SELECT
     d.id, d.brand, d.model, d.category, d.screen_size_inches,
     d.is_color, d.is_open_system, d.supports_stylus,
-    d.storage_gb, d.weight_g, prices.lowest_price_cny
+    d.storage_gb, d.weight_g, {PRICE_COLUMNS}
 FROM devices AS d
-LEFT JOIN (
-    SELECT device_id, MIN(price_cny) AS lowest_price_cny
-    FROM offers
-    WHERE is_available = 1
-    GROUP BY device_id
-) AS prices ON prices.device_id = d.id
+{LOWEST_PRICE_JOIN}
 """
 
-DETAIL_QUERY = """
+DETAIL_QUERY = f"""
 SELECT
-    d.*,
-    prices.lowest_price_cny
+    d.*, {PRICE_COLUMNS}
 FROM devices AS d
-LEFT JOIN (
-    SELECT device_id, MIN(price_cny) AS lowest_price_cny
-    FROM offers
-    WHERE is_available = 1
-    GROUP BY device_id
-) AS prices ON prices.device_id = d.id
+{LOWEST_PRICE_JOIN}
 WHERE d.id = ?
 """
 

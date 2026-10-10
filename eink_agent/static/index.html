@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EInkAgent 墨水屏选购助手</title>
+<style>
+  :root {
+    --paper: #f4f1ea;
+    --card: #fbfaf6;
+    --ink: #1d1d1b;
+    --ink-soft: #55534e;
+    --ink-faint: #8a877f;
+    --rule: #dcd7cc;
+    --accent: #2f5d50;
+    --accent-soft: #e3ece8;
+    --warn: #8a5a12;
+    --warn-soft: #f5ead6;
+    --danger: #8f2f2f;
+    --danger-soft: #f6e2e0;
+    --user: #1d1d1b;
+    --user-ink: #f4f1ea;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #191a18;
+      --card: #222320;
+      --ink: #e9e6de;
+      --ink-soft: #b5b1a7;
+      --ink-faint: #7f7c74;
+      --rule: #34352f;
+      --accent: #8cc2ae;
+      --accent-soft: #24332d;
+      --warn: #e2b46a;
+      --warn-soft: #362c1b;
+      --danger: #e59a92;
+      --danger-soft: #3a2422;
+      --user: #e9e6de;
+      --user-ink: #191a18;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 15px/1.65 -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
+      "Microsoft YaHei", "Segoe UI", sans-serif;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    border-bottom: 1px solid var(--rule);
+    padding: 14px 16px;
+  }
+  .bar { max-width: 860px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
+  .logo {
+    width: 30px; height: 30px; border-radius: 6px; flex: none;
+    background: var(--ink); color: var(--paper);
+    display: grid; place-items: center; font: 600 15px/1 Georgia, serif;
+  }
+  h1 { font: 600 17px/1.2 Georgia, "Songti SC", serif; margin: 0; letter-spacing: .02em; }
+  .tagline { color: var(--ink-faint); font-size: 12.5px; }
+  .spacer { flex: 1; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  .ghost {
+    background: none; border: 1px solid var(--rule); border-radius: 6px;
+    padding: 5px 10px; font-size: 13px; color: var(--ink-soft);
+  }
+  .ghost:hover { border-color: var(--ink-faint); color: var(--ink); }
+
+  main { flex: 1; overflow-y: auto; padding: 24px 16px 8px; }
+  #thread { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+  .welcome { padding: 28px 0 8px; }
+  .welcome h2 { font: 600 26px/1.3 Georgia, "Songti SC", serif; margin: 0 0 8px; }
+  .welcome p { color: var(--ink-soft); margin: 0 0 20px; max-width: 560px; }
+  .examples { display: flex; flex-wrap: wrap; gap: 8px; }
+  .example {
+    background: var(--card); border: 1px solid var(--rule); border-radius: 999px;
+    padding: 7px 14px; font-size: 13.5px; color: var(--ink-soft); text-align: left;
+  }
+  .example:hover { border-color: var(--accent); color: var(--accent); }
+  .limits { margin-top: 22px; font-size: 12.5px; color: var(--ink-faint); }
+
+  .msg { display: flex; flex-direction: column; gap: 10px; }
+  .msg.user { align-items: flex-end; }
+  .bubble-user {
+    background: var(--user); color: var(--user-ink);
+    padding: 9px 14px; border-radius: 14px 14px 4px 14px; max-width: 80%;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .answer {
+    background: var(--card); border: 1px solid var(--rule); border-radius: 4px 14px 14px 14px;
+    padding: 14px 18px; overflow-x: auto;
+  }
+  .answer p { margin: 0 0 .7em; }
+  .answer p:last-child { margin-bottom: 0; }
+  .answer h3, .answer h4 { font-size: 15px; margin: .9em 0 .4em; }
+  .answer ul, .answer ol { margin: .2em 0 .8em; padding-left: 1.4em; }
+  .answer table { border-collapse: collapse; margin: .4em 0 .9em; font-size: 13.5px; width: 100%; }
+  .answer th, .answer td { border-bottom: 1px solid var(--rule); padding: 6px 10px; text-align: left; vertical-align: top; }
+  .answer th { color: var(--ink-soft); font-weight: 600; }
+  .answer code { font: 12.5px/1 ui-monospace, Menlo, monospace; background: var(--paper); padding: 1px 4px; border-radius: 3px; }
+
+  .notice { font-size: 13px; padding: 7px 12px; border-radius: 6px; }
+  .notice.degraded { background: var(--warn-soft); color: var(--warn); }
+  .notice.blocked, .notice.error { background: var(--danger-soft); color: var(--danger); }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+  .card {
+    background: var(--card); border: 1px solid var(--rule); border-radius: 10px;
+    padding: 12px 14px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .card .brand { font-size: 12px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .06em; }
+  .card .model { font-weight: 600; line-height: 1.35; }
+  .price { font: 600 20px/1.2 Georgia, serif; }
+  .price.none { font-family: inherit; font-size: 13px; font-weight: 400; color: var(--ink-faint); }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .chip { font-size: 11.5px; padding: 1px 7px; border-radius: 4px; background: var(--paper); color: var(--ink-soft); }
+  .source { font-size: 12px; color: var(--ink-faint); }
+  .source a { color: var(--accent); text-decoration: none; }
+  .source a:hover { text-decoration: underline; }
+
+  details.trace { font-size: 13px; color: var(--ink-soft); }
+  details.trace summary { cursor: pointer; color: var(--ink-faint); list-style: none; user-select: none; }
+  details.trace summary::-webkit-details-marker { display: none; }
+  details.trace summary::before { content: "▸ "; }
+  details.trace[open] summary::before { content: "▾ "; }
+  .steps { margin: 8px 0 0; padding: 0; list-style: none; border-left: 2px solid var(--rule); }
+  .step { padding: 4px 0 8px 14px; position: relative; }
+  .step::before {
+    content: ""; position: absolute; left: -6px; top: 10px; width: 10px; height: 10px;
+    border-radius: 50%; background: var(--accent); border: 2px solid var(--paper);
+  }
+  .step.error::before { background: var(--danger); }
+  .step .name { font: 600 12.5px/1.4 ui-monospace, Menlo, monospace; color: var(--ink); }
+  .step .args { font: 12px/1.5 ui-monospace, Menlo, monospace; color: var(--ink-faint); word-break: break-all; }
+  .badge { font-size: 11px; padding: 0 6px; border-radius: 4px; margin-left: 6px; }
+  .badge.ok { background: var(--accent-soft); color: var(--accent); }
+  .badge.error { background: var(--danger-soft); color: var(--danger); }
+
+  .thinking { color: var(--ink-faint); font-size: 14px; display: flex; align-items: center; gap: 8px; }
+  .dots span {
+    display: inline-block; width: 5px; height: 5px; margin-right: 3px; border-radius: 50%;
+    background: var(--ink-faint); animation: blink 1.2s infinite both;
+  }
+  .dots span:nth-child(2) { animation-delay: .2s; }
+  .dots span:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%, 80%, 100% { opacity: .2; } 40% { opacity: 1; } }
+
+  footer { border-top: 1px solid var(--rule); padding: 12px 16px 16px; background: var(--paper); }
+  form { max-width: 860px; margin: 0 auto; display: flex; gap: 8px; align-items: flex-end; }
+  textarea {
+    flex: 1; resize: none; font: inherit; color: var(--ink); background: var(--card);
+    border: 1px solid var(--rule); border-radius: 10px; padding: 10px 12px;
+    min-height: 44px; max-height: 160px; outline: none;
+  }
+  textarea:focus { border-color: var(--ink-faint); }
+  .send {
+    background: var(--ink); color: var(--paper); border: none; border-radius: 10px;
+    padding: 0 18px; height: 44px; font-weight: 600;
+  }
+  .send:disabled { opacity: .4; cursor: default; }
+  .hint { max-width: 860px; margin: 6px auto 0; font-size: 11.5px; color: var(--ink-faint); }
+
+  @media (max-width: 560px) {
+    .tagline { display: none; }
+    .welcome h2 { font-size: 22px; }
+    .bubble-user { max-width: 92%; }
+    .answer { padding: 12px 14px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="logo">e</div>
+    <div>
+      <h1>EInkAgent</h1>
+      <div class="tagline">墨水屏选购助手 · 基于真实设备数据与价格快照</div>
+    </div>
+    <div class="spacer"></div>
+    <button class="ghost" id="reset" type="button">新对话</button>
+  </div>
+</header>
+
+<main id="scroller">
+  <div id="thread">
+    <section class="welcome" id="welcome">
+      <h2>想买一台什么样的墨水屏？</h2>
+      <p>说出预算、屏幕大小、是否需要手写或彩色，我会从设备库里查询、比较，并标出每个价格的卖家和采集日期。</p>
+      <div class="examples" id="examples"></div>
+      <div class="limits">只能查询与比较，不能下单或付款。价格是采集时的快照，海外价格按固定汇率折算为人民币参考价。</div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <form id="form">
+    <textarea id="input" rows="1" placeholder="例如：预算 2000 以内，要能手写" maxlength="1000"></textarea>
+    <button class="send" id="send" type="submit">发送</button>
+  </form>
+  <div class="hint">Enter 发送 · Shift + Enter 换行</div>
+</footer>
+
+<script>
+(() => {
+  // Must stay in step with MAX_HISTORY_MESSAGES in eink_agent/agent.py.
+  const MAX_HISTORY = 10;
+  const MAX_CARDS = 6;
+  const EXAMPLES = [
+    "预算2000元以内，要能手写，推荐几款",
+    "比较一下 Kindle Paperwhite 2026 和 Kobo Clara BW",
+    "10 寸左右的彩色手写本有哪些？",
+    "我想买个阅读器",
+  ];
+
+  const thread = document.getElementById("thread");
+  const scroller = document.getElementById("scroller");
+  const form = document.getElementById("form");
+  const input = document.getElementById("input");
+  const send = document.getElementById("send");
+  let history = [];
+  let busy = false;
+
+  // ---------- safe rendering ----------
+  const escapeHtml = (text) => String(text)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
+  const safeUrl = (url) => (/^https?:\/\//i.test(url || "") ? url : null);
+
+  // Escape first, then add a small set of formatting. Model output can never
+  // inject HTML because every character has been escaped before this runs.
+  const inline = (text) => escapeHtml(text)
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+
+  const isTableRow = (line) => /^\s*\|.*\|\s*$/.test(line);
+  const isDivider = (line) => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(line);
+  const cells = (line) => line.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+
+  function renderMarkdown(source) {
+    const lines = source.replace(/\r/g, "").split("\n");
+    const out = [];
+    let i = 0;
+    while (i < lines.length) {
+      const line = lines[i];
+      if (isTableRow(line) && i + 1 < lines.length && isDivider(lines[i + 1])) {
+        const head = cells(line);
+        i += 2;
+        const rows = [];
+        while (i < lines.length && isTableRow(lines[i])) rows.push(cells(lines[i++]));
+        out.push("<table><thead><tr>" + head.map((c) => `<th>${inline(c)}</th>`).join("") +
+          "</tr></thead><tbody>" +
+          rows.map((r) => "<tr>" + r.map((c) => `<td>${inline(c)}</td>`).join("") + "</tr>").join("") +
+          "</tbody></table>");
+        continue;
+      }
+      const heading = line.match(/^(#{1,4})\s+(.*)$/);
+      if (heading) { out.push(`<h4>${inline(heading[2])}</h4>`); i++; continue; }
+      if (/^\s*[-*]\s+/.test(line) || /^\s*\d+[.)]\s+/.test(line)) {
+        const ordered = /^\s*\d+[.)]\s+/.test(line);
+        const items = [];
+        while (i < lines.length && (/^\s*[-*]\s+/.test(lines[i]) || /^\s*\d+[.)]\s+/.test(lines[i]))) {
+          items.push(lines[i].replace(/^\s*([-*]|\d+[.)])\s+/, ""));
+          i++;
+        }
+        const tag = ordered ? "ol" : "ul";
+        out.push(`<${tag}>` + items.map((it) => `<li>${inline(it)}</li>`).join("") + `</${tag}>`);
+        continue;
+      }
+      if (!line.trim()) { i++; continue; }
+      const para = [];
+      while (i < lines.length && lines[i].trim() && !isTableRow(lines[i]) &&
+             !/^(#{1,4})\s/.test(lines[i]) && !/^\s*([-*]|\d+[.)])\s+/.test(lines[i])) {
+        para.push(inline(lines[i]));
+        i++;
+      }
+      out.push(`<p>${para.join("<br>")}</p>`);
+    }
+    return out.join("");
+  }
+
+  // ---------- device cards ----------
+  function collectDevices(toolCalls) {
+    const byId = new Map();
+    for (const call of toolCalls) {
+      if (call.status !== "ok" || !call.result) continue;
+      const items = Array.isArray(call.result) ? call.result : [call.result];
+      for (const device of items) {
+        if (device && device.id != null) {
+          byId.set(device.id, { ...(byId.get(device.id) || {}), ...device });
+        }
+      }
+    }
+    return [...byId.values()];
+  }
+
+  const yesNo = (value, yes, no) => (value === 1 ? yes : value === 0 ? no : null);
+
+  function renderCard(d) {
+    const chips = [
+      d.screen_size_inches ? `${d.screen_size_inches} 吋` : null,
+      yesNo(d.is_color, "彩色", "黑白"),
+      yesNo(d.supports_stylus, "支持手写", "不支持手写"),
+      d.weight_g ? `${d.weight_g} g` : null,
+      d.storage_gb ? `${d.storage_gb} GB` : null,
+    ].filter(Boolean);
+    const price = d.lowest_price_cny != null
+      ? `<div class="price">¥${escapeHtml(d.lowest_price_cny)}</div>`
+      : `<div class="price none">暂无在售报价</div>`;
+    const priceUrl = safeUrl(d.price_url);
+    const priceSource = d.price_seller
+      ? `<div class="source">${priceUrl ? `<a href="${escapeHtml(priceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(d.price_seller)}</a>` : escapeHtml(d.price_seller)} · ${escapeHtml(d.price_collected_at || "")}</div>`
+      : "";
+    const specUrl = safeUrl(d.spec_source_url);
+    const specSource = specUrl
+      ? `<div class="source"><a href="${escapeHtml(specUrl)}" target="_blank" rel="noopener noreferrer">规格来源</a>${d.spec_verified_at ? ` · 核验于 ${escapeHtml(d.spec_verified_at)}` : ""}</div>`
+      : "";
+    return `<div class="card">
+      <div class="brand">${escapeHtml(d.brand)}</div>
+      <div class="model">${escapeHtml(d.model)}</div>
+      ${price}
+      <div class="chips">${chips.map((c) => `<span class="chip">${escapeHtml(c)}</span>`).join("")}</div>
+      ${priceSource}${specSource}
+    </div>`;
+  }
+
+  // ---------- trace ----------
+  const TOOL_LABELS = {
+    search_devices: "条件搜索",
+    get_device_detail: "查看详情",
+    compare_devices: "设备对比",
+  };
+
+  function renderTrace(body) {
+    const calls = body.tool_calls;
+    const seconds = (body.latency_ms / 1000).toFixed(1);
+    if (!calls.length) {
+      return `<details class="trace"><summary>未调用工具 · ${seconds} 秒 · ${escapeHtml(body.model)}</summary></details>`;
+    }
+    const steps = calls.map((c) => {
+      const label = TOOL_LABELS[c.name] || c.name;
+      const badge = c.status === "ok"
+        ? `<span class="badge ok">${c.result_count} 条结果</span>`
+        : `<span class="badge error">${escapeHtml(c.error_type || "error")}</span>`;
+      return `<li class="step ${c.status === "ok" ? "" : "error"}">
+        <div class="name">${escapeHtml(c.name)} <span style="font-weight:400;color:var(--ink-faint)">${escapeHtml(label)}</span>${badge}</div>
+        <div class="args">${escapeHtml(JSON.stringify(c.arguments))}</div>
+      </li>`;
+    }).join("");
+    return `<details class="trace"><summary>Agent 调用过程：${calls.length} 次工具调用 · ${seconds} 秒 · ${escapeHtml(body.model)}</summary><ol class="steps">${steps}</ol></details>`;
+  }
+
+  // ---------- conversation ----------
+  const scrollToEnd = () => { scroller.scrollTop = scroller.scrollHeight; };
+
+  function addUser(text) {
+    document.getElementById("welcome")?.remove();
+    const el = document.createElement("div");
+    el.className = "msg user";
+    el.innerHTML = `<div class="bubble-user">${escapeHtml(text)}</div>`;
+    thread.appendChild(el);
+    scrollToEnd();
+  }
+
+  function addThinking() {
+    const el = document.createElement("div");
+    el.className = "msg";
+    el.innerHTML = `<div class="thinking"><span class="dots"><span></span><span></span><span></span></span>正在查询设备库…</div>`;
+    thread.appendChild(el);
+    scrollToEnd();
+    return el;
+  }
+
+  const NOTICES = {
+    degraded: "这次没能完成查询，回答是降级结果。",
+    blocked: "原回答声称完成了系统不支持的操作，已被拦截。",
+  };
+
+  function renderAnswer(el, body) {
+    const devices = collectDevices(body.tool_calls).slice(0, MAX_CARDS);
+    el.innerHTML =
+      (NOTICES[body.status] ? `<div class="notice ${body.status}">${NOTICES[body.status]}</div>` : "") +
+      `<div class="answer">${renderMarkdown(body.answer)}</div>` +
+      (devices.length ? `<div class="cards">${devices.map(renderCard).join("")}</div>` : "") +
+      renderTrace(body);
+  }
+
+  async function ask(text) {
+    if (busy || !text.trim()) return;
+    busy = true;
+    send.disabled = true;
+    addUser(text);
+    const slot = addThinking();
+    try {
+      const response = await fetch("/agent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text, history: history.slice(-MAX_HISTORY) }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const detail = typeof body.detail === "string" ? body.detail : `请求失败（HTTP ${response.status}）`;
+        slot.innerHTML = `<div class="notice error">${escapeHtml(detail)}</div>`;
+        return;
+      }
+      renderAnswer(slot, body);
+      // Only completed turns become context for the next question.
+      if (body.status === "ok") {
+        history.push({ role: "user", content: text }, { role: "assistant", content: body.answer });
+      }
+    } catch (error) {
+      slot.innerHTML = `<div class="notice error">无法连接服务，请确认后端已启动。</div>`;
+    } finally {
+      busy = false;
+      send.disabled = false;
+      scrollToEnd();
+      input.focus();
+    }
+  }
+
+  // ---------- wiring ----------
+  const autosize = () => {
+    input.style.height = "auto";
+    input.style.height = Math.min(input.scrollHeight, 160) + "px";
+  };
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const text = input.value.trim();
+    input.value = "";
+    autosize();
+    ask(text);
+  });
+
+  input.addEventListener("input", autosize);
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+      event.preventDefault();
+      form.requestSubmit();
+    }
+  });
+
+  document.getElementById("examples").innerHTML = EXAMPLES
+    .map((e) => `<button class="example" type="button">${escapeHtml(e)}</button>`).join("");
+  document.getElementById("examples").addEventListener("click", (event) => {
+    const button = event.target.closest(".example");
+    if (button) ask(button.textContent);
+  });
+
+  document.getElementById("reset").addEventListener("click", () => window.location.reload());
+  input.focus();
+})();
+</script>
+</body>
+</html>
