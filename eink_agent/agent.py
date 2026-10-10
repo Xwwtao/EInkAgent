@@ -17,7 +17,10 @@ from eink_agent.agent_tools import (
     execute_tool,
     tool_names,
 )
-from eink_agent.answer_guard import find_unexecuted_action_claims
+from eink_agent.answer_guard import (
+    find_internal_field_names,
+    find_unexecuted_action_claims,
+)
 
 # One failure gives the model a chance to correct itself; a second failure in
 # a row means it is not converging, and each extra round costs a model call.
@@ -46,10 +49,16 @@ BLOCKED_ANSWER = (
     "不能下单、付款或修改任何数据。"
 )
 
-REWRITE_INSTRUCTION = (
+CLAIM_REWRITE_INSTRUCTION = (
     "Your answer claims an action that was never executed ({claims}). "
     "EInkAgent cannot place orders, pay, or modify data. Rewrite the answer "
     "using only the tool results, and state the limitation if relevant."
+)
+
+FIELD_NAME_REWRITE_INSTRUCTION = (
+    "Your answer shows internal field names ({fields}). Rewrite it in plain "
+    "language for the user, e.g. say 'closed system' instead of "
+    "is_open_system=0, and keep every fact unchanged."
 )
 
 SYSTEM_PROMPT = (
@@ -63,8 +72,10 @@ SYSTEM_PROMPT = (
     "the limitation. If a request lacks sufficient constraints or device IDs, "
     "ask a clarifying question without calling tools. "
     "Base device claims only on tool results. A null field means the source "
-    "did not publish it: say it is unknown and never infer it. Prices are "
-    "lowest_price_cny snapshots from specific sellers and dates; overseas "
+    "did not publish it: say it is unknown and never infer it. Never show "
+    "field names, raw 0/1 flags or null to the user; describe them in plain "
+    "language. Prices are lowest-price snapshots from the seller and date "
+    "returned with each device; overseas "
     "prices are converted from USD at a fixed rate and are reference prices "
     "only. If a tool returns an error, correct the arguments and try again, "
     "or explain the problem to the user. Answer in the user's language."
@@ -200,6 +211,16 @@ def _run_tool_call(tool_call: Any) -> tuple[dict[str, Any], dict[str, Any]]:
     return entry, message
 
 
+def _rewrite_instruction(claims: list[str], field_names: list[str]) -> str:
+    """Explain every problem found in an answer in one rewrite request."""
+    parts = []
+    if claims:
+        parts.append(CLAIM_REWRITE_INSTRUCTION.format(claims="、".join(claims)))
+    if field_names:
+        parts.append(FIELD_NAME_REWRITE_INSTRUCTION.format(fields=", ".join(field_names)))
+    return " ".join(parts)
+
+
 def _recent_history(history: list[dict[str, str]]) -> list[dict[str, str]]:
     """Validate earlier turns and keep only the most recent ones."""
     for message in history:
@@ -267,20 +288,24 @@ def run_agent(
                 return AgentResult(DEGRADED_ANSWER, tool_trace, "degraded")
 
             claims = find_unexecuted_action_claims(answer)
-            if not claims:
+            field_names = find_internal_field_names(answer)
+            if not claims and not field_names:
                 return AgentResult(answer, tool_trace)
 
             if rewrite_requested:
-                return AgentResult(BLOCKED_ANSWER, tool_trace, "blocked")
+                # A false completion claim misleads the user and is blocked;
+                # a leftover field name is only awkward wording, so the
+                # answer is kept.
+                if claims:
+                    return AgentResult(BLOCKED_ANSWER, tool_trace, "blocked")
+                return AgentResult(answer, tool_trace)
 
             rewrite_requested = True
             messages.append({"role": "assistant", "content": answer})
             messages.append(
                 {
                     "role": "user",
-                    "content": REWRITE_INSTRUCTION.format(
-                        claims="、".join(claims)
-                    ),
+                    "content": _rewrite_instruction(claims, field_names),
                 }
             )
             continue

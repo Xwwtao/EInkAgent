@@ -47,3 +47,46 @@ def find_unexecuted_action_claims(answer: str) -> list[str]:
         claims.extend(claim for claim in COMPLETION_CLAIMS if claim in sentence)
 
     return claims
+
+
+# Database and tool-result field names that should never reach users. Only
+# names containing an underscore are listed: plain words such as "brand" or
+# "model" also appear in normal sentences.
+INTERNAL_FIELD_NAMES = (
+    "is_color",
+    "is_open_system",
+    "is_waterproof",
+    "is_available",
+    "supports_stylus",
+    "has_front_light",
+    "has_warm_light",
+    "mono_ppi",
+    "color_ppi",
+    "operating_system",
+    "storage_gb",
+    "weight_g",
+    "release_year",
+    "screen_size_inches",
+    "spec_source_url",
+    "spec_verified_at",
+    "lowest_price_cny",
+    "price_cny",
+    "price_seller",
+    "price_collected_at",
+    "price_url",
+    "device_id",
+)
+
+# Chinese characters count as word characters in Python's \b, so the
+# boundaries are spelled out: a field name must not touch ASCII letters,
+# digits or underscores on either side.
+FIELD_NAME_PATTERN = re.compile(
+    r"(?<![A-Za-z0-9_])("
+    + "|".join(re.escape(name) for name in INTERNAL_FIELD_NAMES)
+    + r")(?![A-Za-z0-9_])"
+)
+
+
+def find_internal_field_names(answer: str) -> list[str]:
+    """Return internal field names shown to the user, in order, once each."""
+    return list(dict.fromkeys(FIELD_NAME_PATTERN.findall(answer)))
