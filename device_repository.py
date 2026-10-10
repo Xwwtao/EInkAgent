@@ -33,6 +33,11 @@ WHERE d.id = ?
 """
 
 
+def _escape_like(text: str) -> str:
+    """Make %, _ and the escape character match literally in LIKE."""
+    return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
 def search_devices(
     *,
     max_price: int | None = None,
@@ -45,6 +50,7 @@ def search_devices(
     is_open_system: bool | None = None,
     category: str | None = None,
     brand: str | None = None,
+    keyword: str | None = None,
     limit: int = 20,
 ) -> list[dict[str, Any]]:
     """根据选购条件查询设备；None 表示用户未限制该条件。"""
@@ -62,6 +68,8 @@ def search_devices(
         raise ValueError("max_screen_size 必须大于 0")
     if not 1 <= limit <= 100:
         raise ValueError("limit 必须在 1 到 100 之间")
+    if keyword is not None and not keyword.split():
+        raise ValueError("keyword 不能为空白")
 
     conditions: list[str] = []
     parameters: list[Any] = []
@@ -69,6 +77,14 @@ def search_devices(
     if brand is not None:
         conditions.append("d.brand = ?")
         parameters.append(brand)
+    if keyword is not None:
+        # Every whitespace-separated token must appear in "brand model", so
+        # "Kindle Paperwhite 2026" matches "Kindle Paperwhite (2026)".
+        for token in keyword.split():
+            conditions.append(
+                "LOWER(d.brand || ' ' || d.model) LIKE ? ESCAPE '\\'"
+            )
+            parameters.append(f"%{_escape_like(token.lower())}%")
     if max_weight_g is not None:
         conditions.append("d.weight_g <= ?")
         parameters.append(max_weight_g)

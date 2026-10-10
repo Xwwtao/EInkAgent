@@ -34,7 +34,7 @@ SEARCH_DEVICES_TOOL = {
     "function": {
         "name": "search_devices",
         "description": (
-            "Search fictional E Ink devices using explicit user constraints."
+            "Search real E Ink devices using explicit user constraints."
         ),
         "parameters": DeviceRequirements.model_json_schema(),
     },
@@ -45,7 +45,7 @@ GET_DEVICE_DETAIL_TOOL = {
     "function": {
         "name": "get_device_detail",
         "description": (
-            "Get complete details for one fictional E Ink device by ID."
+            "Get complete details for one E Ink device by ID."
         ),
         "parameters": GetDeviceDetailArguments.model_json_schema(),
     },
@@ -56,7 +56,7 @@ COMPARE_DEVICES_TOOL = {
     "function": {
         "name": "compare_devices",
         "description": (
-            "Compare two to five fictional E Ink devices by their IDs."
+            "Compare two to five E Ink devices by their IDs."
         ),
         "parameters": CompareDevicesArguments.model_json_schema(),
     },
@@ -83,6 +83,26 @@ _TOOL_REGISTRY = {
     ),
 }
 
+class UnknownToolError(ValueError):
+    """Raised when the model asks for a tool outside the allowlist."""
+
+
+def tool_names() -> list[str]:
+    """Return the allowlisted tool names in the order shown to the model."""
+    return [tool["function"]["name"] for tool in AGENT_TOOLS]
+
+
+def describe_tool_arguments(name: str) -> dict[str, Any]:
+    """Summarize a tool's parameters so the model can correct its call."""
+    argument_model, _ = _TOOL_REGISTRY[name]
+    schema = argument_model.model_json_schema()
+
+    return {
+        "required": schema.get("required", []),
+        "allowed": sorted(schema.get("properties", {})),
+    }
+
+
 def execute_tool(
     name: str,
     arguments: dict[str, object],
@@ -91,7 +111,7 @@ def execute_tool(
     registration = _TOOL_REGISTRY.get(name)
 
     if registration is None:
-        raise ValueError(f"Unsupported tool: {name}")
+        raise UnknownToolError(f"Unsupported tool: {name}")
 
     argument_model, handler = registration
 

@@ -10,3 +10,4 @@ data/*.db
 evals/runs/
 evals/agent_runs/
 .DS_Store
+evals/smoke_runs/

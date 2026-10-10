@@ -123,3 +123,29 @@ def test_get_device_detail_preserves_unknown_fields_as_none():
 
     assert device is not None
     assert device["color_ppi"] is None
+
+
+def test_search_devices_keyword_matches_brand_and_model_tokens():
+    results = search_devices(keyword="demoink reader")
+
+    assert [device["model"] for device in results] == ["Reader 6"]
+
+
+def test_search_devices_keyword_tokens_ignore_punctuation_between_words():
+    results = search_devices(keyword="Color 7")
+
+    assert [device["model"] for device in results] == ["Color 7"]
+
+
+def test_search_devices_keyword_without_match_returns_empty_list():
+    assert search_devices(keyword="Paperwhite") == []
+
+
+def test_search_devices_keyword_treats_like_wildcards_literally():
+    assert search_devices(keyword="%") == []
+    assert search_devices(keyword="_") == []
+
+
+def test_search_devices_rejects_blank_keyword():
+    with pytest.raises(ValueError, match="keyword"):
+        search_devices(keyword="   ")

@@ -94,7 +94,7 @@ After completing Quick start, configure credentials in your current zsh terminal
 ```bash
 read -s "DEEPSEEK_API_KEY?DeepSeek API key: "
 export DEEPSEEK_API_KEY
-export DEEPSEEK_MODEL=deepseek-v4-flash
+export DEEPSEEK_MODEL=deepseek-flash
 python -m examples.parse_requirements_demo
 ```
 
