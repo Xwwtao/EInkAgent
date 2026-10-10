@@ -145,6 +145,12 @@ def test_run_agent_stops_after_maximum_rounds():
     assert len(result.tool_trace) == 2
     assert client.chat.completions.create.call_count == 2
 
+    tool_choices = [
+        call.kwargs["tool_choice"]
+        for call in client.chat.completions.create.call_args_list
+    ]
+    assert tool_choices == ["auto", "none"]
+
 def test_run_agent_executes_device_detail_tool():
     client = Mock()
     tool_call = _make_tool_call(
@@ -521,3 +527,48 @@ def test_system_prompt_describes_real_data_and_unknown_fields():
 def test_tool_descriptions_no_longer_mention_fictional_devices():
     for tool in agent_tools.AGENT_TOOLS:
         assert "fictional" not in tool["function"]["description"]
+
+
+def test_last_round_forbids_tools_so_collected_results_are_answered():
+    client = Mock()
+    client.chat.completions.create.side_effect = [
+        _response(
+            tool_calls=[
+                _raw_tool_call("search_devices", '{"keyword": "Reader"}', "c1")
+            ]
+        ),
+        _response(content="Reader 6 售价 899 元。"),
+    ]
+
+    result = run_agent("Reader 6 多少钱", client=client, model="test-model", max_rounds=2)
+
+    assert result.status == "ok"
+    assert result.answer == "Reader 6 售价 899 元。"
+    last_request = client.chat.completions.create.call_args.kwargs
+    assert last_request["tool_choice"] == "none"
+
+
+def test_default_round_limit_allows_search_compare_and_answer_with_a_retry():
+    client = Mock()
+    client.chat.completions.create.side_effect = [
+        _response(tool_calls=[_raw_tool_call("search_devices", '{"brand": "Kindle"}', "c1")]),
+        _response(tool_calls=[_raw_tool_call("search_devices", '{"keyword": "Reader"}', "c2")]),
+        _response(tool_calls=[_raw_tool_call("compare_devices", '{"device_ids": [1, 3]}', "c3")]),
+        _response(content="两台设备的对比如下。"),
+    ]
+
+    result = run_agent("比较 Reader 6 和 Color 7", client=client, model="test-model")
+
+    assert result.status == "ok"
+    assert [trace["name"] for trace in result.tool_trace] == [
+        "search_devices",
+        "search_devices",
+        "compare_devices",
+    ]
+
+
+def test_search_tool_schema_offers_keyword_for_product_names():
+    properties = agent_tools.SEARCH_DEVICES_TOOL["function"]["parameters"]["properties"]
+
+    assert "keyword" in properties
+    assert "Amazon" in properties["brand"]["description"]

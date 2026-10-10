@@ -197,7 +197,7 @@ def run_agent(
     *,
     client: OpenAI,
     model: str,
-    max_rounds: int = 3,
+    max_rounds: int = 5,
 ) -> AgentResult:
     """Run a bounded model-tool-model conversation.
 
@@ -217,12 +217,15 @@ def run_agent(
     consecutive_failures = 0
     rewrite_requested = False
 
-    for _ in range(max_rounds):
+    for round_index in range(max_rounds):
+        # On the last round the model must answer from what it already has,
+        # so collected tool results are not thrown away.
+        is_last_round = round_index == max_rounds - 1
         response = client.chat.completions.create(
             model=model,
             messages=messages,
             tools=AGENT_TOOLS,
-            tool_choice="auto",
+            tool_choice="none" if is_last_round else "auto",
         )
 
         if not response.choices:

@@ -17,4 +17,19 @@ class DeviceRequirements(BaseModel):
     is_color: bool | None = None
     is_open_system: bool | None = None
     category: str | None = Field(default=None, min_length=1)
-    brand: str | None = Field(default=None, min_length=1)
+    brand: str | None = Field(
+        default=None,
+        min_length=1,
+        description=(
+            "Exact manufacturer name, e.g. Amazon (for Kindle), BOOX, iReader, "
+            "Kobo. Use keyword for product or series names."
+        ),
+    )
+    keyword: str | None = Field(
+        default=None,
+        min_length=1,
+        description=(
+            "Words that must all appear in the brand or model name, "
+            "e.g. 'Kindle Paperwhite' or 'Clara BW'."
+        ),
+    )
