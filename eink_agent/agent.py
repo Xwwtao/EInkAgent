@@ -3,8 +3,9 @@
 Design notes: docs/decisions/004-agent-tool-failures.md.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import json
+import time
 from typing import Any, Literal
 
 from openai import OpenAI
@@ -84,11 +85,16 @@ SYSTEM_PROMPT = (
 
 @dataclass
 class AgentResult:
-    """Final answer, every attempted tool call, and how the run ended."""
+    """Final answer, every attempted tool call, and how the run ended.
+
+    ``model_calls`` records latency and token usage for every model request,
+    for evaluation reports (AGENTS.md section 7).
+    """
 
     answer: str
     tool_trace: list[dict[str, Any]]
     status: AgentStatus = "ok"
+    model_calls: list[dict[str, Any]] = field(default_factory=list)
 
 
 class ToolCallError(Exception):
@@ -163,6 +169,28 @@ def _execute(name: str, arguments: dict[str, Any]) -> Any:
             "The tool failed while running. Try different arguments or "
             "explain the problem to the user.",
         ) from error
+
+
+USAGE_FIELDS = (
+    "prompt_tokens",
+    "completion_tokens",
+    # DeepSeek reports how much of the prompt hit its context cache; other
+    # providers may not, in which case these stay None.
+    "prompt_cache_hit_tokens",
+    "prompt_cache_miss_tokens",
+)
+
+
+def _record_usage(response: Any, model: str, latency_ms: int) -> dict[str, Any]:
+    """Read token usage from a response; missing figures stay None."""
+    usage = getattr(response, "usage", None)
+    record: dict[str, Any] = {"model": model, "latency_ms": latency_ms}
+
+    for name in USAGE_FIELDS:
+        value = getattr(usage, name, None) if usage is not None else None
+        record[name] = value if isinstance(value, int) else None
+
+    return record
 
 
 def _count_results(result: Any) -> int:
@@ -262,6 +290,7 @@ def run_agent(
     ]
 
     tool_trace: list[dict[str, Any]] = []
+    model_calls: list[dict[str, Any]] = []
     consecutive_failures = 0
     rewrite_requested = False
 
@@ -269,11 +298,15 @@ def run_agent(
         # On the last round the model must answer from what it already has,
         # so collected tool results are not thrown away.
         is_last_round = round_index == max_rounds - 1
+        started = time.perf_counter()
         response = client.chat.completions.create(
             model=model,
             messages=messages,
             tools=AGENT_TOOLS,
             tool_choice="none" if is_last_round else "auto",
+        )
+        model_calls.append(
+            _record_usage(response, model, round((time.perf_counter() - started) * 1000))
         )
 
         if not response.choices:
@@ -285,20 +318,20 @@ def run_agent(
         if not tool_calls:
             answer = (message.content or "").strip()
             if not answer:
-                return AgentResult(DEGRADED_ANSWER, tool_trace, "degraded")
+                return AgentResult(DEGRADED_ANSWER, tool_trace, "degraded", model_calls)
 
             claims = find_unexecuted_action_claims(answer)
             field_names = find_internal_field_names(answer)
             if not claims and not field_names:
-                return AgentResult(answer, tool_trace)
+                return AgentResult(answer, tool_trace, "ok", model_calls)
 
             if rewrite_requested:
                 # A false completion claim misleads the user and is blocked;
                 # a leftover field name is only awkward wording, so the
                 # answer is kept.
                 if claims:
-                    return AgentResult(BLOCKED_ANSWER, tool_trace, "blocked")
-                return AgentResult(answer, tool_trace)
+                    return AgentResult(BLOCKED_ANSWER, tool_trace, "blocked", model_calls)
+                return AgentResult(answer, tool_trace, "ok", model_calls)
 
             rewrite_requested = True
             messages.append({"role": "assistant", "content": answer})
@@ -323,6 +356,6 @@ def run_agent(
                 consecutive_failures = 0
 
         if consecutive_failures >= MAX_CONSECUTIVE_TOOL_FAILURES:
-            return AgentResult(DEGRADED_ANSWER, tool_trace, "degraded")
+            return AgentResult(DEGRADED_ANSWER, tool_trace, "degraded", model_calls)
 
-    return AgentResult(DEGRADED_ANSWER, tool_trace, "degraded")
+    return AgentResult(DEGRADED_ANSWER, tool_trace, "degraded", model_calls)
