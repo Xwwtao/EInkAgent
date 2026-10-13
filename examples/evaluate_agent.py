@@ -15,6 +15,7 @@ import subprocess
 import time
 from typing import Any
 
+import openai
 from openai import OpenAI
 
 from eink_agent.agent import SYSTEM_PROMPT, run_agent
@@ -29,6 +30,19 @@ DATA_FILES = (
     PROJECT_DIR / "data" / "real_devices.csv",
     PROJECT_DIR / "data" / "real_offers.csv",
 )
+
+
+class EvaluationAborted(RuntimeError):
+    """A configuration error that would fail every case, so the run stops."""
+
+
+# These mean the key or model name is wrong: retrying or running the other
+# cases cannot succeed, and a report full of them would measure nothing.
+CONFIGURATION_ERRORS = {
+    openai.AuthenticationError: "模型服务拒绝了认证（HTTP 401），请检查 DEEPSEEK_API_KEY",
+    openai.PermissionDeniedError: "模型服务拒绝访问（HTTP 403），请检查 DEEPSEEK_API_KEY 的权限",
+    openai.NotFoundError: "模型服务找不到该模型（HTTP 404），请检查 DEEPSEEK_MODEL",
+}
 
 
 def _sha256(path: Path) -> str:
@@ -56,6 +70,9 @@ def _run_case(case: dict[str, Any], client: Any, model: str) -> dict[str, Any]:
     started = time.perf_counter()
     try:
         result = run_agent(case["input"], client=client, model=model, history=case["history"])
+    except tuple(CONFIGURATION_ERRORS) as error:
+        message = next(text for kind, text in CONFIGURATION_ERRORS.items() if isinstance(error, kind))
+        raise EvaluationAborted(f"{message}；本次不生成报告。") from error
     except Exception as error:  # noqa: BLE001 - every failure must stay in the report
         return {
             "run": {"exception": type(error).__name__},
@@ -198,19 +215,25 @@ def main() -> None:
         print(f"注意：evals/pricing.json 是 {pricing.get('model')} 的单价，本次模型为 {model}，不估算成本。")
         pricing = None
 
+    if not os.environ.get("DEEPSEEK_API_KEY"):
+        raise SystemExit("未设置 DEEPSEEK_API_KEY，请先在当前终端设置后再运行。")
+
     with OpenAI(
         api_key=os.environ["DEEPSEEK_API_KEY"],
         base_url=DEEPSEEK_BASE_URL,
         timeout=MODEL_TIMEOUT_SECONDS,
         max_retries=MODEL_MAX_RETRIES,
     ) as client:
-        json_path, markdown_path = run_evaluation(
-            cases_path=CASES_PATH,
-            client=client,
-            model=model,
-            report_dir=REPORT_DIR,
-            pricing=pricing,
-        )
+        try:
+            json_path, markdown_path = run_evaluation(
+                cases_path=CASES_PATH,
+                client=client,
+                model=model,
+                report_dir=REPORT_DIR,
+                pricing=pricing,
+            )
+        except EvaluationAborted as error:
+            raise SystemExit(f"评测已停止：{error}") from error
 
     report = json.loads(json_path.read_text(encoding="utf-8"))
     print(f"通过：{report['summary']['passed']}/{report['summary']['total']}")

@@ -5,6 +5,7 @@ from unittest.mock import Mock
 
 import httpx
 import openai
+import pytest
 
 from examples import compare_eval_reports, evaluate_agent
 
@@ -128,3 +129,17 @@ def test_compare_reports_lists_changed_cases(tmp_path):
 
     assert "x" in markdown and "PASS → FAIL" in markdown
     assert "| y |" not in markdown
+
+
+def test_authentication_error_stops_the_run_without_writing_a_report(tmp_path):
+    request = httpx.Request("POST", "https://api.deepseek.com/chat/completions")
+    client = Mock()
+    client.chat.completions.create.side_effect = openai.AuthenticationError(
+        "invalid key", response=httpx.Response(401, request=request), body=None
+    )
+
+    with pytest.raises(evaluate_agent.EvaluationAborted, match="DEEPSEEK_API_KEY"):
+        _run(tmp_path, client)
+
+    assert client.chat.completions.create.call_count == 1
+    assert not (tmp_path / "reports").exists()
