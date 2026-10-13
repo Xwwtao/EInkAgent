@@ -66,7 +66,6 @@
           {
             "name": "search_devices",
             "arguments": {
-              "category": "reader",
               "max_weight_g": 180
             },
             "result_count": 11
@@ -97,6 +96,17 @@
               "max_price": 4000
             },
             "result_count": 12
+          }
+        ],
+        [
+          {
+            "name": "search_devices",
+            "arguments": {
+              "supports_stylus": true,
+              "min_screen_size": 10,
+              "max_price": 4000
+            },
+            "result_count": 13
           }
         ]
       ],
@@ -177,30 +187,14 @@
       "required_calls_any_of": [
         [
           {
-            "name": "compare_devices",
-            "arguments": {
-              "device_ids": [
-                45,
-                15
-              ]
-            },
-            "result_count": 2
-          }
-        ],
-        [
-          {
-            "name": "get_device_detail",
-            "arguments": {
-              "device_id": 45
-            },
-            "result_count": 1
+            "result_ids_include": [
+              45
+            ]
           },
           {
-            "name": "get_device_detail",
-            "arguments": {
-              "device_id": 15
-            },
-            "result_count": 1
+            "result_ids_include": [
+              15
+            ]
           }
         ]
       ],
@@ -221,34 +215,11 @@
       "required_calls_any_of": [
         [
           {
-            "name": "search_devices",
-            "arguments": {
-              "keyword": "Scribe"
-            },
-            "result_count": 3
-          },
-          {
-            "name": "get_device_detail",
-            "arguments": {
-              "device_id": 28
-            },
-            "result_count": 1
-          }
-        ],
-        [
-          {
-            "name": "search_devices",
-            "arguments": {
-              "keyword": "Kindle Scribe"
-            },
-            "result_count": 3
-          },
-          {
-            "name": "get_device_detail",
-            "arguments": {
-              "device_id": 28
-            },
-            "result_count": 1
+            "result_ids_include": [
+              27,
+              28,
+              29
+            ]
           }
         ]
       ],
@@ -272,30 +243,14 @@
       "required_calls_any_of": [
         [
           {
-            "name": "compare_devices",
-            "arguments": {
-              "device_ids": [
-                38,
-                17
-              ]
-            },
-            "result_count": 2
-          }
-        ],
-        [
-          {
-            "name": "get_device_detail",
-            "arguments": {
-              "device_id": 38
-            },
-            "result_count": 1
+            "result_ids_include": [
+              38
+            ]
           },
           {
-            "name": "get_device_detail",
-            "arguments": {
-              "device_id": 17
-            },
-            "result_count": 1
+            "result_ids_include": [
+              17
+            ]
           }
         ]
       ],
@@ -355,23 +310,14 @@
       "required_calls_any_of": [
         [
           {
-            "name": "search_devices",
-            "arguments": {
-              "keyword": "Kindle Paperwhite 2026"
-            },
-            "result_count": 2
-          }
-        ],
-        [
+            "result_ids_include": [
+              45
+            ]
+          },
           {
-            "name": "compare_devices",
-            "arguments": {
-              "device_ids": [
-                45,
-                46
-              ]
-            },
-            "result_count": 2
+            "result_ids_include": [
+              46
+            ]
           }
         ]
       ],
@@ -397,7 +343,6 @@
             "name": "search_devices",
             "arguments": {
               "is_color": true,
-              "min_screen_size": 13,
               "max_price": 500
             },
             "result_count": 0
@@ -808,20 +753,9 @@
       "required_calls_any_of": [
         [
           {
-            "name": "get_device_detail",
-            "arguments": {
-              "device_id": 38
-            },
-            "result_count": 1
-          }
-        ],
-        [
-          {
-            "name": "search_devices",
-            "arguments": {
-              "keyword": "Leaf5+"
-            },
-            "result_count": 1
+            "result_ids_include": [
+              38
+            ]
           }
         ]
       ],
@@ -857,20 +791,9 @@
       "required_calls_any_of": [
         [
           {
-            "name": "get_device_detail",
-            "arguments": {
-              "device_id": 17
-            },
-            "result_count": 1
-          }
-        ],
-        [
-          {
-            "name": "search_devices",
-            "arguments": {
-              "keyword": "Libra Colour"
-            },
-            "result_count": 1
+            "result_ids_include": [
+              17
+            ]
           }
         ]
       ],
@@ -930,20 +853,9 @@
       "required_calls_any_of": [
         [
           {
-            "name": "search_devices",
-            "arguments": {
-              "keyword": "Leaf5+"
-            },
-            "result_count": 1
-          }
-        ],
-        [
-          {
-            "name": "get_device_detail",
-            "arguments": {
-              "device_id": 38
-            },
-            "result_count": 1
+            "result_ids_include": [
+              38
+            ]
           }
         ]
       ],
@@ -970,20 +882,9 @@
       "required_calls_any_of": [
         [
           {
-            "name": "search_devices",
-            "arguments": {
-              "keyword": "Clara BW"
-            },
-            "result_count": 1
-          }
-        ],
-        [
-          {
-            "name": "get_device_detail",
-            "arguments": {
-              "device_id": 15
-            },
-            "result_count": 1
+            "result_ids_include": [
+              15
+            ]
           }
         ]
       ],

@@ -65,6 +65,12 @@ def _git_commit() -> str:
     return commit + ("-dirty" if dirty else "")
 
 
+def _result_ids(result: Any) -> list[int]:
+    """Device IDs a tool returned, so cases can check which devices were found."""
+    items = result if isinstance(result, list) else [result]
+    return [item["id"] for item in items if isinstance(item, dict) and "id" in item]
+
+
 def _run_case(case: dict[str, Any], client: Any, model: str) -> dict[str, Any]:
     """Run one case; model errors are recorded instead of stopping the run."""
     started = time.perf_counter()
@@ -90,6 +96,7 @@ def _run_case(case: dict[str, Any], client: Any, model: str) -> dict[str, Any]:
             "status": call["status"],
             "error_type": call.get("error", {}).get("type") if call["status"] == "error" else None,
             "result_count": call["result_count"],
+            "result_ids": _result_ids(call["result"]),
         }
         for call in result.tool_trace
     ]

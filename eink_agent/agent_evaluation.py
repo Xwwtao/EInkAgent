@@ -42,24 +42,52 @@ def _arguments_match(expected: dict[str, Any], actual: dict[str, Any] | None) ->
     )
 
 
+def _describe(requirement: dict[str, Any]) -> str:
+    parts = [requirement.get("name", "any tool")]
+    if requirement.get("arguments"):
+        parts.append(str(requirement["arguments"]))
+    if requirement.get("result_ids_include"):
+        parts.append(f"finding devices {requirement['result_ids_include']}")
+    return " ".join(parts)
+
+
 def _check_option(option: list[dict[str, Any]], calls: list[dict[str, Any]]) -> list[dict[str, str]]:
-    """Return the failures for one set of required calls (empty = satisfied)."""
+    """Return the failures for one set of required calls (empty = satisfied).
+
+    A requirement may name a tool and arguments, and checks the outcome by
+    row count, by which devices were returned, or both. Without a name, any
+    tool counts: "find device 45" can be met by a search or a detail call.
+    """
     failures = []
 
     for requirement in option:
-        matching = [
+        label = _describe(requirement)
+        candidates = [
             call
             for call in calls
             if call["status"] == "ok"
-            and call["name"] == requirement["name"]
-            and _arguments_match(requirement["arguments"], call["arguments"])
+            and call["name"] == requirement.get("name", call["name"])
+            and _arguments_match(requirement.get("arguments", {}), call["arguments"])
         ]
-        label = f"{requirement['name']} {requirement['arguments']}"
-
-        if not matching:
+        if not candidates:
             failures.append({"type": "missing_call", "detail": label})
-        elif all(call["result_count"] != requirement["result_count"] for call in matching):
-            counts = sorted({call["result_count"] for call in matching})
+            continue
+
+        wanted_ids = set(requirement.get("result_ids_include", []))
+        if wanted_ids:
+            with_ids = [call for call in candidates if wanted_ids <= set(call.get("result_ids", []))]
+            if not with_ids:
+                found = sorted({i for call in candidates for i in call.get("result_ids", [])})
+                failures.append(
+                    {"type": "wrong_devices", "detail": f"{label}: found {found[:10]}"}
+                )
+                continue
+            candidates = with_ids
+
+        if "result_count" in requirement and all(
+            call["result_count"] != requirement["result_count"] for call in candidates
+        ):
+            counts = sorted({call["result_count"] for call in candidates})
             failures.append(
                 {
                     "type": "wrong_result_count",

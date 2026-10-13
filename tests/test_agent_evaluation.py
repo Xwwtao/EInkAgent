@@ -40,8 +40,14 @@ def _case(**expect) -> dict:
     return {"id": "case", "category": "single_search", "input": "x", "history": [], "expect": base}
 
 
-def _call(name: str, arguments: dict, result_count: int, status: str = "ok") -> dict:
-    return {"name": name, "arguments": arguments, "status": status, "result_count": result_count}
+def _call(name: str, arguments: dict, result_count: int, status: str = "ok", ids=None) -> dict:
+    return {
+        "name": name,
+        "arguments": arguments,
+        "status": status,
+        "result_count": result_count,
+        "result_ids": ids or [],
+    }
 
 
 def _run(answer="好的。", tool_calls=None, status="ok") -> dict:
@@ -242,7 +248,44 @@ def test_case_file_is_well_formed():
         assert case["input"].strip(), case["id"]
         for option in case["expect"]["required_calls_any_of"]:
             for requirement in option:
-                assert requirement["name"] in tool_names, case["id"]
-                assert isinstance(requirement["result_count"], int), case["id"]
+                assert set(requirement) <= {"name", "arguments", "result_count", "result_ids_include"}, case["id"]
+                assert requirement.get("name", "search_devices") in tool_names, case["id"]
+                assert "result_count" in requirement or requirement.get("result_ids_include"), case["id"]
         if case["expect"]["no_tool_calls"]:
             assert not case["expect"]["required_calls_any_of"], case["id"]
+
+
+def test_found_devices_pass_regardless_of_keyword_wording():
+    case = _case(required_calls_any_of=[[{"result_ids_include": [45]}, {"result_ids_include": [46]}]])
+    run = _run(tool_calls=[_call("search_devices", {"keyword": "Paperwhite"}, 4, ids=[45, 46, 23, 24])])
+
+    assert grade_case(case, run)["result"] == "PASS"
+
+
+def test_devices_found_across_separate_calls_pass():
+    case = _case(required_calls_any_of=[[{"result_ids_include": [38]}, {"result_ids_include": [17]}]])
+    run = _run(
+        tool_calls=[
+            _call("search_devices", {"keyword": "Leaf5+"}, 1, ids=[38]),
+            _call("get_device_detail", {"device_id": 17}, 1, ids=[17]),
+        ]
+    )
+
+    assert grade_case(case, run)["result"] == "PASS"
+
+
+def test_missing_device_is_reported_as_wrong_devices():
+    case = _case(required_calls_any_of=[[{"name": "search_devices", "result_ids_include": [17]}]])
+    run = _run(tool_calls=[_call("search_devices", {"keyword": "Libra"}, 1, ids=[99])])
+
+    grade = grade_case(case, run)
+
+    assert _failure_types(grade) == ["wrong_devices"]
+    assert "17" in grade["failures"][0]["detail"]
+
+
+def test_named_requirement_ignores_other_tools():
+    case = _case(required_calls_any_of=[[{"name": "compare_devices", "result_ids_include": [16, 20]}]])
+    run = _run(tool_calls=[_call("search_devices", {"is_color": True}, 7, ids=[16, 20, 17])])
+
+    assert _failure_types(grade_case(case, run)) == ["missing_call"]
