@@ -95,9 +95,12 @@ result counts and failures.
 - **The answer checks are keyword rules.** They miss paraphrases, and a
   refusal word in the same sentence hides a claim (for example "我无法处理
   退款，但已帮您下单了"). See `docs/learning/01-agent-walkthrough.md`.
+- **The Agent sometimes adds facts from general knowledge.** The judge found
+  3 such answers in 35 (page-turn buttons, a discontinued product line, an
+  included stylus); the prompt rule against it is not always followed.
 - **The evaluation checks wording with keywords.** A correct answer phrased
-  differently can fail, and a fluent but unsupported sentence can pass; see
-  [Evaluation](#evaluation).
+  differently can fail; the model judge covers groundedness but missed one
+  contradiction in 35 answers. See [Evaluation](#evaluation).
 - Conversations are lost when the page is refreshed.
 - The agent cannot buy anything or change data; all tools are read-only.
 
@@ -111,21 +114,14 @@ expected number of rows or the expected devices, and the answer contains the
 expected facts without claiming an unexecuted action. Expected row counts are
 tied to the committed CSV data and checked by a unit test.
 
-**Latest result: 33 of 35 passed** — `evals/reports/20261013T122005Z.md`,
-`deepseek-flash`, single run on 2026-10-13 at commit `d2f7c28`.
-p50 latency 2.8 s, p95 6.2 s per case; 118,106 prompt and 14,339 completion
-tokens, about ¥0.09–0.18 for the whole run at the off-peak and peak prices in
-`evals/pricing.json`.
-
-The two failures:
-
-- **n03** returned DeepSeek's raw tool-call syntax as the answer after four
-  searches used up the rounds. Fixed afterwards in `04c241f` (the last round
-  now tells the model to answer, and leaked tool syntax is never shown); the
-  fix has unit tests but **has not been measured by a new run**.
-- **d01** answered correctly ("没有公开数据……无法确认") but missed the expected
-  keywords. Left as a failure: keyword lists are no longer extended to fit the
-  model's wording (see below).
+**Latest result: 34 of 35 passed** — `evals/reports/20261013T123305Z.md`,
+`deepseek-flash`, single run on 2026-10-13 at commit `1f5fe39`.
+p50 latency 3.3 s, p95 6.9 s per case; 133,035 prompt and 15,571 completion
+tokens, about ¥0.10–0.20 for the whole run at the off-peak and peak prices in
+`evals/pricing.json`. The one failure, i01, refused correctly but said
+"并不是一个有效" instead of a listed keyword; keyword lists are frozen (see
+below), so it stays a failure. n03, which returned raw tool-call syntax in
+run 5, now answers normally, so the fix in `04c241f` is measured.
 
 How the result got here, all reports committed in `evals/reports/`:
 
@@ -136,6 +132,7 @@ How the result got here, all reports committed in `evals/reports/`:
 | 3 | `001efca` | 34 / 35 | Name lookups check the devices found instead of keyword wording (5 of 6 earlier failures had correct answers) |
 | 4 | `2b78411` | 33 / 35 | `category` restricted to reader / note / tablet |
 | 5 | `d2f7c28` | 33 / 35 | Simplified Chinese reply rule |
+| 6 | `1f5fe39` | 34 / 35 | Raw tool-call syntax never returned as an answer |
 
 Every change to the cases was approved and is recorded with its reason in
 `docs/decisions/006-agent-evaluation.md`. After run 5 the keyword lists are
@@ -143,10 +140,50 @@ frozen: correct answers with different wording are left for a model-based
 judge (planned) rather than patched case by case, so the cases do not drift
 toward the model's phrasing.
 
+### Answer groundedness (model judge)
+
+Keyword checks cannot tell whether every fact in an answer comes from the
+tool results. A second model from a different family, `qwen3.8-flash`
+(thinking off, temperature 0), answers two yes/no questions per answer:
+is every device fact supported by the tool results, and does the answer
+address the question. It sees the Agent's system prompt as context, and
+everything it grades is marked as data, not instructions
+(`docs/decisions/007-llm-judge.md`).
+
+On run 6 (`evals/reports/judge_20261013T123305Z.md`):
+
+- **32 of 35 answers judged fully grounded.** The judge flagged s01 ("Libra
+  Colour has page-turn buttons"), n02 ("Sony's Reader line was discontinued")
+  and t02 ("a stylus is included"). None of these is in the tool results;
+  t02 is likely false, since the Kobo stylus is sold separately.
+- **Calibration against the author's labels:** 30 of 35 before the judge saw
+  the Agent's rules (four false alarms on the fixed-rate price note), 33 of
+  35 after.
+  Checking each disagreement against the stored tool results showed the
+  labels had missed three unsupported statements, and the review also found
+  one the judge missed: n03 says nothing is available even at 2,000 yuan
+  while its own search returned 15 devices. After this adjudication: 34 of
+  35, 1 miss, 0 false alarms (`evals/reports/calibration_20261013T123305Z.md`).
+  The labels were corrected after seeing the judge's verdicts, which biases
+  agreement upward.
+- **Fault injection:** 10 answers with one appended sentence contradicting
+  the tool results (wrong weight or price, reversed waterproof or stylus
+  support) were all detected, 10 of 10 (`evals/faults/`). Appended sentences
+  are easier to spot than n03's contradiction inside a longer sentence,
+  which the judge missed.
+- **Limits:** 35 cases, one labeller, single judge run; the judge prompt was
+  adjusted on these same 35 answers after the first calibration.
+
+The judge result is reported separately and never changes the pass count.
+
 ```bash
 python -m examples.evaluate_agent                      # run all cases, write reports
 python -m examples.compare_eval_reports A.json B.json  # what changed between runs
 python -m examples.regrade_eval_report A.json          # re-grade a saved run with current cases
+python -m examples.label_answers A.json                # hand-label groundedness
+python -m examples.inject_faults A.json                # build answers with known errors
+python -m examples.judge_eval_report A.json            # run the judge (JUDGE_* variables)
+python -m examples.calibrate_judge judge_A.json        # recompute agreement after relabelling
 ```
 
 ## Architecture
@@ -212,7 +249,7 @@ python -m examples.smoke_test_agent
 - [x] v0.4 — Tool-calling agent
 - [x] v0.5 — Real data, tool-failure recovery, answer checks, `POST /agent`, chat UI
 - [x] Evaluation on real data with committed reports (35 cases)
-- [ ] Model-based judge for answer quality, calibrated against hand labels
+- [x] Model-based judge for answer groundedness, calibrated against hand labels and fault injection
 - [ ] Retrieval over manuals and after-sales policies, with citations
 - [ ] Preference memory across turns
 

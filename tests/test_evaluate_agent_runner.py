@@ -90,7 +90,9 @@ def test_runner_grades_cases_and_writes_json_and_markdown(tmp_path):
     assert report["summary"]["passed"] == 2
     assert report["summary"]["tokens"] == {"prompt": 300, "completion": 30}
     assert report["results"][0]["tool_calls"][0]["result_count"] == 1
-    assert "result" not in report["results"][0]["tool_calls"][0]
+    # Full results are kept so the judge can run later without the Agent (decision 007).
+    assert report["results"][0]["tool_calls"][0]["result"][0]["model"] == "Reader 6"
+    assert report["results"][0]["history"] == []
     assert report["results"][0]["tool_calls"][0]["result_ids"] == [1]
 
     markdown = markdown_path.read_text(encoding="utf-8")
