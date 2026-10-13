@@ -185,3 +185,25 @@ def test_labelling_saves_answers_and_can_resume(tmp_path):
     assert any("是否防水未公布" in text for text in shown)
     # Already-labelled cases are not asked again.
     label_answers.label(report_path, labels_dir=labels_dir, ask=lambda prompt: 1 / 0, show=lambda text: None)
+
+
+def test_provider_options_are_passed_only_when_given():
+    client = _client('{"grounded": true, "unsupported_claims": [], "responsive": true}')
+    _judge(client)
+    assert "extra_body" not in client.chat.completions.create.call_args.kwargs
+
+    judge_answer(
+        client=client, model="m", question="q", history=[], tool_calls=[], answer="a",
+        extra_body={"enable_thinking": False},
+    )
+    assert client.chat.completions.create.call_args.kwargs["extra_body"] == {"enable_thinking": False}
+
+
+def test_judge_report_prints_progress_before_each_call(tmp_path, capsys):
+    report_path = tmp_path / "20261014T000000Z.json"
+    report_path.write_text(json.dumps(REPORT, ensure_ascii=False), encoding="utf-8")
+    client = _client('{"grounded": true, "unsupported_claims": [], "responsive": true}')
+
+    judge_eval_report.run_judge(report_path, client=client, model="m", labels_dir=tmp_path / "labels")
+
+    assert "[1/1] 正在评判 d01" in capsys.readouterr().out

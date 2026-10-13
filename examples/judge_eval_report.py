@@ -30,7 +30,7 @@ def _markdown(report: dict[str, Any], judged: dict[str, Any], calibration: dict[
         f"# 模型裁判：{judged['report']}",
         "",
         f"- 被评运行：{report['run']['started_at']}（Agent `{report['run']['model']}`）",
-        f"- 裁判模型：`{judged['judge_model']}`，temperature 0，单次裁判",
+        f"- 裁判模型：`{judged['judge_model']}`，temperature 0，选项 {judged['judge_options']}，单次裁判",
         f"- 裁判条数：{len(verdicts)}（裁判出错 {errors} 条）",
         "",
         f"- grounded：{sum(v['grounded'] for v in ok)} / {len(ok)}",
@@ -59,15 +59,24 @@ def _markdown(report: dict[str, Any], judged: dict[str, Any], calibration: dict[
     return "\n".join(lines) + "\n"
 
 
-def run_judge(report_path: Path, *, client: Any, model: str, labels_dir: Path = LABELS_DIR) -> tuple[Path, Path]:
+def run_judge(
+    report_path: Path,
+    *,
+    client: Any,
+    model: str,
+    labels_dir: Path = LABELS_DIR,
+    extra_body: dict[str, Any] | None = None,
+) -> tuple[Path, Path]:
     """Judge every answered case in a report and write the judge files."""
     report_path = Path(report_path)
     report = json.loads(report_path.read_text(encoding="utf-8"))
+    answered = [result for result in report["results"] if result["answer"] is not None]
     verdicts = {}
-    for result in report["results"]:
-        if result["answer"] is None:
-            continue
+    for index, result in enumerate(answered, start=1):
+        # Printed before the call: a slow model should look busy, not stuck.
+        print(f"[{index}/{len(answered)}] 正在评判 {result['id']} …", flush=True)
         verdicts[result["id"]] = judge_answer(
+            extra_body=extra_body,
             client=client,
             model=model,
             question=result["input"],
@@ -75,9 +84,14 @@ def run_judge(report_path: Path, *, client: Any, model: str, labels_dir: Path = 
             tool_calls=result["tool_calls"],
             answer=result["answer"],
         )
-        print(f"{result['id']}: {verdicts[result['id']]}")
+        print(f"    {verdicts[result['id']]}", flush=True)
 
-    judged = {"report": report_path.name, "judge_model": model, "verdicts": verdicts}
+    judged = {
+        "report": report_path.name,
+        "judge_model": model,
+        "judge_options": extra_body or {},
+        "verdicts": verdicts,
+    }
     labels_path = Path(labels_dir) / report_path.name
     calibration = None
     if labels_path.exists():
@@ -91,6 +105,12 @@ def run_judge(report_path: Path, *, client: Any, model: str, labels_dir: Path = 
     return json_path, markdown_path
 
 
+def _thinking_option() -> dict[str, Any]:
+    """DashScope Qwen models think by default: about 50 s per case instead of
+    2–5 s with the same verdicts on a spot check. Off unless asked for."""
+    return {"enable_thinking": os.environ.get("JUDGE_ENABLE_THINKING", "false").lower() == "true"}
+
+
 def main() -> None:
     for name in ("JUDGE_API_KEY", "JUDGE_BASE_URL"):
         if not os.environ.get(name):
@@ -102,7 +122,10 @@ def main() -> None:
         max_retries=MODEL_MAX_RETRIES,
     ) as client:
         json_path, markdown_path = run_judge(
-            Path(sys.argv[1]), client=client, model=os.environ.get("JUDGE_MODEL", DEFAULT_JUDGE_MODEL)
+            Path(sys.argv[1]),
+            client=client,
+            model=os.environ.get("JUDGE_MODEL", DEFAULT_JUDGE_MODEL),
+            extra_body=_thinking_option(),
         )
     print(markdown_path.read_text(encoding="utf-8"))
     print(f"已保存：{json_path}\n      {markdown_path}")

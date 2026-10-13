@@ -81,17 +81,26 @@ def judge_answer(
     history: list[dict[str, str]],
     tool_calls: list[dict[str, Any]],
     answer: str,
+    extra_body: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Ask the judge model for a verdict; failures are returned, not raised."""
+    """Ask the judge model for a verdict; failures are returned, not raised.
+
+    ``extra_body`` carries provider-specific options, such as DashScope's
+    ``enable_thinking``; it is only sent when given.
+    """
+    request: dict[str, Any] = {
+        "model": model,
+        "temperature": 0,
+        "messages": [
+            {"role": "system", "content": JUDGE_SYSTEM_PROMPT},
+            {"role": "user", "content": _judge_prompt(question, history, tool_calls, answer)},
+        ],
+    }
+    if extra_body:
+        request["extra_body"] = extra_body
+
     try:
-        response = client.chat.completions.create(
-            model=model,
-            temperature=0,
-            messages=[
-                {"role": "system", "content": JUDGE_SYSTEM_PROMPT},
-                {"role": "user", "content": _judge_prompt(question, history, tool_calls, answer)},
-            ],
-        )
+        response = client.chat.completions.create(**request)
     except Exception as error:  # noqa: BLE001 - recorded per case, never fatal
         return {"error": type(error).__name__}
 
