@@ -8,22 +8,19 @@
     "s01_budget_stylus": {
       "grounded": false,
       "unsupported_claims": [
-        "Kobo Libra Colour 有实体翻页键"
+        "Kobo Libra Colour 有实体翻页键",
+        "BOOX Leaf5+ 可安装微信读书、Kindle 等多平台应用"
       ],
       "responsive": true
     },
     "s02_color_open_system": {
-      "grounded": false,
-      "unsupported_claims": [
-        "按固定汇率换算，仅供参考"
-      ],
+      "grounded": true,
+      "unsupported_claims": [],
       "responsive": true
     },
     "s03_light_reader": {
-      "grounded": false,
-      "unsupported_claims": [
-        "海外价格由美元按固定汇率换算，仅供参考。"
-      ],
+      "grounded": true,
+      "unsupported_claims": [],
       "responsive": true
     },
     "s04_big_note_under_4000": {
@@ -42,17 +39,13 @@
       "responsive": true
     },
     "m01_compare_by_name": {
-      "grounded": false,
-      "unsupported_claims": [
-        "价格是从美元按固定汇率换算的参考价"
-      ],
+      "grounded": true,
+      "unsupported_claims": [],
       "responsive": true
     },
     "m02_cheapest_scribe_detail": {
-      "grounded": false,
-      "unsupported_claims": [
-        "该价格为海外价格按固定汇率折算，仅供参照"
-      ],
+      "grounded": true,
+      "unsupported_claims": [],
       "responsive": true
     },
     "m03_lighter_of_two": {
@@ -76,8 +69,10 @@
       "responsive": true
     },
     "n02_unknown_brand": {
-      "grounded": true,
-      "unsupported_claims": [],
+      "grounded": false,
+      "unsupported_claims": [
+        "索尼的电子书业务（Reader 系列）早已停产退市"
+      ],
       "responsive": true
     },
     "n03_budget_too_low": {
@@ -171,8 +166,10 @@
       "responsive": true
     },
     "t02_followup_open_system": {
-      "grounded": true,
-      "unsupported_claims": [],
+      "grounded": false,
+      "unsupported_claims": [
+        "附赠手写笔类配件即可批注"
+      ],
       "responsive": true
     },
     "t03_change_budget": {
@@ -193,9 +190,15 @@
   },
   "calibration": {
     "compared": 35,
-    "agreed": 30,
+    "agreed": 33,
     "judge_missed": 0,
-    "judge_false_alarm": 5,
+    "judge_false_alarm": 2,
     "skipped": 0
+  },
+  "fault_detection": {
+    "injected": 10,
+    "detected": 10,
+    "missed": [],
+    "errors": 0
   }
 }
