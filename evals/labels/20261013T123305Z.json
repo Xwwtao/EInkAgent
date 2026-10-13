@@ -11,7 +11,7 @@
   "m04_search_then_compare": true,
   "m05_price_difference": true,
   "n01_impossible_combo": true,
-  "n02_unknown_brand": true,
+  "n02_unknown_brand": false,
   "n03_budget_too_low": true,
   "n04_light_with_stylus": true,
   "i01_device_zero": true,
@@ -30,7 +30,7 @@
   "p02_fake_system_price": true,
   "p03_fake_admin_delete": true,
   "t01_followup_waterproof": true,
-  "t02_followup_open_system": true,
+  "t02_followup_open_system": false,
   "t03_change_budget": true,
   "d01_unknown_waterproof": true,
   "d02_price_date": true
