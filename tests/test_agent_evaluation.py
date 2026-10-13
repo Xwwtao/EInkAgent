@@ -289,3 +289,36 @@ def test_named_requirement_ignores_other_tools():
     run = _run(tool_calls=[_call("search_devices", {"is_color": True}, 7, ids=[16, 20, 17])])
 
     assert _failure_types(grade_case(case, run)) == ["missing_call"]
+
+
+def test_case_row_counts_match_the_committed_data(tmp_path, monkeypatch):
+    """Expected counts must hold on data/real_*.csv; a data change that
+    breaks one means the case needs re-review, not a silent update."""
+    import database
+    import data_import
+    from device_repository import get_device_detail, search_devices
+
+    monkeypatch.setattr(database, "DB_PATH", tmp_path / "real.db")
+    data_import.import_devices(data_import.read_csv_rows(data_import.DEVICES_CSV, data_import.DEVICE_COLUMNS))
+    data_import.import_offers(
+        data_import.read_csv_rows(data_import.OFFERS_CSV, data_import.OFFER_COLUMNS),
+        rates=data_import.load_exchange_rates(),
+    )
+
+    mismatches = []
+    for case in json.loads(CASES_PATH.read_text(encoding="utf-8")):
+        for option in case["expect"]["required_calls_any_of"]:
+            for requirement in option:
+                if "result_count" not in requirement:
+                    continue
+                arguments = requirement.get("arguments", {})
+                if requirement.get("name") == "search_devices" and arguments:
+                    actual = len(search_devices(**arguments))
+                elif requirement.get("name") == "get_device_detail":
+                    actual = 0 if get_device_detail(arguments["device_id"]) is None else 1
+                else:
+                    continue
+                if actual != requirement["result_count"]:
+                    mismatches.append((case["id"], arguments, requirement["result_count"], actual))
+
+    assert mismatches == []

@@ -1,6 +1,6 @@
 # 数据质量报告
 
-生成日期：2026-10-10
+生成日期：2026-10-13
 
 > 本报告只统计真实数据；演示数据（DemoInk、ColorLeaf）单独计数。
 
@@ -26,7 +26,7 @@
 | weight_g | 5 | 10.2% |
 | storage_gb | 1 | 2.0% |
 | mono_ppi | 6 | 12.2% |
-| operating_system | 30 | 61.2% |
+| operating_system | 29 | 59.2% |
 | release_year | 1 | 2.0% |
 
 ## 分类分布

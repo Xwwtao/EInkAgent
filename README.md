@@ -85,7 +85,9 @@ result counts and failures.
   sites are image-based. The 2026 Kindles come from Amazon product pages;
   older Kindles come from Amazon press releases, with some fields taken from
   Wikipedia and marked in the `notes` column.
-  Fields a source does not state are stored as NULL and reported as unknown,
+  Values were collected from manufacturer, retail and media pages, plus the
+  author's own checks where vendors do not publish a field. Fields that could
+  not be determined are stored as NULL and reported as unknown,
   so filters such as "no stylus" do not match devices whose stylus support
   is unpublished.
 - **Converted prices are references**, not what a buyer in China pays after
