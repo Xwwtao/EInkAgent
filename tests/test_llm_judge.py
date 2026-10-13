@@ -299,3 +299,25 @@ def test_judge_report_measures_detection_on_injected_faults(tmp_path):
     judged = json.loads(json_path.read_text(encoding="utf-8"))
     assert judged["fault_detection"] == {"injected": 2, "detected": 1, "missed": ["a#waterproof"], "errors": 0}
     assert "故障注入检出：1 / 2" in markdown_path.read_text(encoding="utf-8")
+
+
+def test_recalibration_uses_saved_verdicts_and_current_labels(tmp_path):
+    from examples import calibrate_judge
+
+    judge_path = tmp_path / "judge_20261014T000000Z.json"
+    judge_path.write_text(json.dumps({
+        "report": "20261014T000000Z.json",
+        "judge_model": "m",
+        "verdicts": {"a": {"grounded": True}, "b": {"grounded": False}},
+    }), encoding="utf-8")
+    labels_dir = tmp_path / "labels"
+    labels_dir.mkdir()
+    (labels_dir / "20261014T000000Z.json").write_text(json.dumps({"a": False, "b": False}), encoding="utf-8")
+
+    output = calibrate_judge.recalibrate(judge_path, labels_dir=labels_dir)
+
+    markdown = output.read_text(encoding="utf-8")
+    assert output.name == "calibration_20261014T000000Z.md"
+    assert "一致：1 / 2" in markdown
+    assert "裁判漏判：1（a）" in markdown
+    assert json.loads(judge_path.read_text(encoding="utf-8"))["verdicts"]["a"] == {"grounded": True}

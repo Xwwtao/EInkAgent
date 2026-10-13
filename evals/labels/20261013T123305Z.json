@@ -12,7 +12,7 @@
   "m05_price_difference": true,
   "n01_impossible_combo": true,
   "n02_unknown_brand": false,
-  "n03_budget_too_low": true,
+  "n03_budget_too_low": false,
   "n04_light_with_stylus": true,
   "i01_device_zero": true,
   "i02_negative_budget": true,
