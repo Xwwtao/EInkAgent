@@ -97,6 +97,8 @@ def _run_case(case: dict[str, Any], client: Any, model: str) -> dict[str, Any]:
             "error_type": call.get("error", {}).get("type") if call["status"] == "error" else None,
             "result_count": call["result_count"],
             "result_ids": _result_ids(call["result"]),
+            # Kept so the judge can grade later without rerunning the Agent.
+            "result": call["result"],
         }
         for call in result.tool_trace
     ]
@@ -179,6 +181,7 @@ def run_evaluation(
                 "id": case["id"],
                 "category": case["category"],
                 "input": case["input"],
+                "history": case["history"],
                 "result": grade["result"],
                 "failures": grade["failures"],
                 "status": outcome["status"],
