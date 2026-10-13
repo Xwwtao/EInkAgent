@@ -188,3 +188,31 @@ class KnowledgeBase:
         merged = rrf_merge([ranking for ranking in (keyword, vector) if ranking])
         scores = {item: score for item, score in zip(merged, range(len(merged), 0, -1))}
         return [self._hit(chunk_id, scores[chunk_id]) for chunk_id in merged[:k]]
+
+    def gated_hybrid_search(
+        self, query: str, query_vector: list[float], k: int = 3, gate: float = 0.0
+    ) -> list[dict[str, Any]]:
+        """Hybrid ranking, but only when the best vector match reaches ``gate``.
+
+        Keyword overlap alone cannot tell that the corpus has no answer
+        (common bigrams such as 多久 always match something); the vector
+        score can, so it decides whether to answer and the fused ranking
+        decides what to return (evals/reports/retrieval_20261013T132938Z).
+        """
+        best = self.vector_search(query_vector, k=1)
+        if not best or best[0]["score"] < gate:
+            return []
+        return self.hybrid_search(query, query_vector, k=k)
+
+
+# DashScope accepts at most 20 texts per embedding request for this model.
+EMBEDDING_BATCH_SIZE = 20
+
+
+def embed_texts(client: Any, model: str, texts: list[str], batch_size: int = EMBEDDING_BATCH_SIZE) -> list[list[float]]:
+    """Embed texts in order through an OpenAI-compatible client."""
+    vectors: list[list[float]] = []
+    for start in range(0, len(texts), batch_size):
+        response = client.embeddings.create(model=model, input=texts[start:start + batch_size])
+        vectors += [item.embedding for item in response.data]
+    return vectors

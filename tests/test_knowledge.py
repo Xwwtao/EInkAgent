@@ -141,3 +141,107 @@ def test_real_corpus_loads_and_every_chunk_has_a_source():
     assert len({chunk["doc_id"] for chunk in chunks}) == 20
     assert all(chunk["source_url"].startswith("https://") for chunk in chunks)
     assert all(chunk["text"].strip() for chunk in chunks)
+
+
+def _embedding_client(dimension_of=lambda text: [float(len(text)), 1.0]):
+    from unittest.mock import Mock
+
+    client = Mock()
+
+    def create(model, input):
+        return Mock(data=[Mock(embedding=dimension_of(text)) for text in input])
+
+    client.embeddings.create.side_effect = create
+    return client
+
+
+def test_embed_texts_batches_requests_and_keeps_order():
+    from eink_agent.knowledge import embed_texts
+
+    client = _embedding_client()
+    texts = [f"t{i}" * (i + 1) for i in range(45)]
+
+    vectors = embed_texts(client, "embed-model", texts, batch_size=20)
+
+    assert client.embeddings.create.call_count == 3
+    assert [len(call.kwargs["input"]) for call in client.embeddings.create.call_args_list] == [20, 20, 5]
+    assert vectors[44] == [float(len(texts[44])), 1.0]
+
+
+def test_build_index_records_model_and_corpus_hash(corpus_dir, tmp_path):
+    from eink_agent.knowledge import corpus_sha256
+    from examples.build_knowledge_index import build_index
+
+    output = tmp_path / "index.json"
+    build_index(client=_embedding_client(), model="embed-model", directory=corpus_dir, output=output)
+
+    index = json.loads(output.read_text(encoding="utf-8"))
+    assert index["model"] == "embed-model"
+    assert index["corpus_sha256"] == corpus_sha256(corpus_dir)
+    assert set(index["vectors"]) == {"01-kaleido#1", "01-kaleido#2", "02-pen#1"}
+    assert KnowledgeBase.from_files(corpus_dir, output).vectors
+
+
+def test_retrieval_metrics_are_document_level():
+    from examples.evaluate_retrieval import precision_at_k, recall_at_k
+
+    hits = [{"doc_id": "a"}, {"doc_id": "a"}, {"doc_id": "c"}]
+
+    assert recall_at_k(hits, ["a", "b"]) == 0.5
+    assert precision_at_k(hits, ["a", "b"], k=3) == pytest.approx(2 / 3)
+    assert recall_at_k([], ["a"]) == 0.0
+    assert precision_at_k([], ["a"], k=3) == 0.0
+
+
+def test_retrieval_cases_file_is_well_formed():
+    cases = json.loads((Path(__file__).resolve().parents[1] / "evals" / "retrieval_cases.json").read_text(encoding="utf-8"))
+    doc_ids = {chunk["doc_id"] for chunk in load_chunks(Path(__file__).resolve().parents[1] / "data" / "knowledge")}
+
+    assert len(cases) >= 30
+    assert len({case["id"] for case in cases}) == len(cases)
+    assert sum(not case["relevant_docs"] for case in cases) >= 5
+    for case in cases:
+        assert set(case["relevant_docs"]) <= doc_ids, case["id"]
+
+
+def test_evaluate_retrieval_compares_three_methods(corpus_dir, tmp_path):
+    from examples.build_knowledge_index import build_index
+    from examples.evaluate_retrieval import run_retrieval_evaluation
+
+    cases = [
+        {"id": "q1", "question": "彩色分辨率", "relevant_docs": ["01-kaleido"]},
+        {"id": "x1", "question": "售后保修", "relevant_docs": []},
+    ]
+    cases_path = tmp_path / "cases.json"
+    cases_path.write_text(json.dumps(cases, ensure_ascii=False), encoding="utf-8")
+    index = tmp_path / "index.json"
+    client = _embedding_client()
+    build_index(client=client, model="embed-model", directory=corpus_dir, output=index)
+
+    json_path, markdown_path = run_retrieval_evaluation(
+        cases_path=cases_path, client=client, model="embed-model",
+        directory=corpus_dir, index_path=index, report_dir=tmp_path / "reports",
+        vector_thresholds=[0.0, 0.99],
+    )
+
+    report = json.loads(json_path.read_text(encoding="utf-8"))
+    assert set(report["methods"]) == {"keyword", "vector", "hybrid", "hybrid_gated"}
+    assert "gate_sweep" in report
+    keyword = report["methods"]["keyword"]
+    assert keyword["recall_at_3"] == 1.0
+    assert keyword["no_answer_empty_rate"] == 1.0
+    assert report["run"]["answerable"] == 1 and report["run"]["unanswerable"] == 1
+    assert "Recall@3" in markdown_path.read_text(encoding="utf-8")
+
+
+def test_gated_hybrid_returns_nothing_when_the_best_vector_match_is_weak(corpus_dir):
+    chunks = load_chunks(corpus_dir)
+    vectors = {"01-kaleido#1": [1.0, 0.0], "01-kaleido#2": [0.8, 0.6], "02-pen#1": [0.0, 1.0]}
+    kb = KnowledgeBase(chunks, vectors=vectors)
+
+    # Keyword search alone would match "彩色", but the vector gate says no.
+    assert kb.keyword_search("彩色", k=3)
+    assert kb.gated_hybrid_search("彩色", [-1.0, -0.1], k=3, gate=0.5) == []
+
+    hits = kb.gated_hybrid_search("彩色分辨率", [0.8, 0.6], k=3, gate=0.5)
+    assert hits[0]["id"] == "01-kaleido#2"
