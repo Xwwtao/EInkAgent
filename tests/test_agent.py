@@ -703,3 +703,9 @@ def test_missing_usage_is_recorded_as_unknown():
 
     assert result.model_calls[0]["prompt_tokens"] is None
     assert result.model_calls[0]["completion_tokens"] is None
+
+
+def test_system_prompt_requires_simplified_chinese_for_simplified_questions():
+    # Evaluation run 20261013T120451Z answered a Simplified Chinese question
+    # in Traditional Chinese.
+    assert "Simplified Chinese" in SYSTEM_PROMPT

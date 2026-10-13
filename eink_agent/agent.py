@@ -79,7 +79,8 @@ SYSTEM_PROMPT = (
     "returned with each device; overseas "
     "prices are converted from USD at a fixed rate and are reference prices "
     "only. If a tool returns an error, correct the arguments and try again, "
-    "or explain the problem to the user. Answer in the user's language."
+    "or explain the problem to the user. Answer in the user's language; "
+    "reply in Simplified Chinese when the user writes Simplified Chinese."
 )
 
 
