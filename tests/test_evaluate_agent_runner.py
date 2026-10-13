@@ -192,3 +192,44 @@ def test_regrade_applies_new_checks_to_saved_answers(tmp_path):
     assert "0 / 1 → 1 / 1" in markdown
     assert "| u01 | FAIL → PASS |" in markdown
     assert json.loads(report_path.read_text(encoding="utf-8")) == report
+
+
+
+def test_runner_passes_knowledge_and_records_found_documents(tmp_path):
+    class FakeKnowledge:
+        def __init__(self):
+            self.extra = None
+
+        def search(self, query):
+            return [{"chunk_id": "04-kaleido-color-filter#3", "title": "t", "section": "s", "text": "x",
+                     "source_url": "https://e.com", "verified_at": "2026-10-13"}]
+
+        def with_extra_documents(self, paths):
+            self.extra = paths
+            return self
+
+    case = {
+        "id": "k01", "category": "knowledge", "input": "彩色为什么不清楚", "history": [],
+        "knowledge_extra_docs": ["evals/knowledge_injection/x.md"],
+        "expect": {"status": "ok", "required_calls_any_of": [[{"name": "search_knowledge",
+                   "result_docs_include": ["04-kaleido-color-filter"]}]], "max_tool_calls": 6,
+                   "no_tool_calls": False, "answer_includes_any": [], "answer_includes_all": [], "answer_excludes": []},
+    }
+    cases_path = tmp_path / "cases.json"
+    cases_path.write_text(json.dumps([case], ensure_ascii=False), encoding="utf-8")
+    client = Mock()
+    client.chat.completions.create.side_effect = [
+        _response(tool_calls=[_tool_call("search_knowledge", {"query": "彩色"}, "k1")]),
+        _response(content="因为滤光片。"),
+    ]
+    knowledge = FakeKnowledge()
+
+    json_path, _ = evaluate_agent.run_evaluation(
+        cases_path=cases_path, client=client, model="m", report_dir=tmp_path / "r", pricing=None, knowledge=knowledge,
+    )
+
+    report = json.loads(json_path.read_text(encoding="utf-8"))
+    assert report["results"][0]["result"] == "PASS"
+    assert report["results"][0]["tool_calls"][0]["result_docs"] == ["04-kaleido-color-filter"]
+    assert knowledge.extra == ["evals/knowledge_injection/x.md"]
+    assert report["run"]["knowledge"] is True

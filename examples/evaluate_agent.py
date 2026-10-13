@@ -20,7 +20,13 @@ from openai import OpenAI
 
 from eink_agent.agent import SYSTEM_PROMPT, run_agent
 from eink_agent.agent_evaluation import grade_case, sum_usage, summarize
-from eink_agent.api import DEEPSEEK_BASE_URL, DEFAULT_MODEL, MODEL_MAX_RETRIES, MODEL_TIMEOUT_SECONDS
+from eink_agent.api import (
+    DEEPSEEK_BASE_URL,
+    DEFAULT_MODEL,
+    MODEL_MAX_RETRIES,
+    MODEL_TIMEOUT_SECONDS,
+    _knowledge_searcher,
+)
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 CASES_PATH = PROJECT_DIR / "evals" / "agent_cases.json"
@@ -71,11 +77,23 @@ def _result_ids(result: Any) -> list[int]:
     return [item["id"] for item in items if isinstance(item, dict) and "id" in item]
 
 
-def _run_case(case: dict[str, Any], client: Any, model: str) -> dict[str, Any]:
+def _result_docs(name: str, result: Any) -> list[str]:
+    """Knowledge documents a search_knowledge call returned."""
+    if name != "search_knowledge" or not isinstance(result, list):
+        return []
+    return list(dict.fromkeys(hit["chunk_id"].split("#")[0] for hit in result if isinstance(hit, dict)))
+
+
+def _run_case(case: dict[str, Any], client: Any, model: str, knowledge: Any = None) -> dict[str, Any]:
     """Run one case; model errors are recorded instead of stopping the run."""
     started = time.perf_counter()
     try:
-        result = run_agent(case["input"], client=client, model=model, history=case["history"])
+        if knowledge is not None and case.get("knowledge_extra_docs"):
+            # Evaluation-only documents, e.g. one hiding an instruction.
+            knowledge = knowledge.with_extra_documents(case["knowledge_extra_docs"])
+        result = run_agent(
+            case["input"], client=client, model=model, history=case["history"], knowledge=knowledge
+        )
     except tuple(CONFIGURATION_ERRORS) as error:
         message = next(text for kind, text in CONFIGURATION_ERRORS.items() if isinstance(error, kind))
         raise EvaluationAborted(f"{message}；本次不生成报告。") from error
@@ -97,6 +115,7 @@ def _run_case(case: dict[str, Any], client: Any, model: str) -> dict[str, Any]:
             "error_type": call.get("error", {}).get("type") if call["status"] == "error" else None,
             "result_count": call["result_count"],
             "result_ids": _result_ids(call["result"]),
+            "result_docs": _result_docs(call["name"], call["result"]),
             # Kept so the judge can grade later without rerunning the Agent.
             "result": call["result"],
         }
@@ -167,6 +186,7 @@ def run_evaluation(
     model: str,
     report_dir: Path,
     pricing: dict[str, Any] | None,
+    knowledge: Any = None,
 ) -> tuple[Path, Path]:
     """Run every case, grade it and write the JSON and Markdown reports."""
     cases = json.loads(cases_path.read_text(encoding="utf-8"))
@@ -174,7 +194,7 @@ def run_evaluation(
     results = []
 
     for case in cases:
-        outcome = _run_case(case, client, model)
+        outcome = _run_case(case, client, model, knowledge)
         grade = grade_case(case, outcome["run"])
         results.append(
             {
@@ -204,6 +224,7 @@ def run_evaluation(
             "data_sha256": {path.name: _sha256(path) for path in DATA_FILES},
             "prompt_sha256": hashlib.sha256(SYSTEM_PROMPT.encode("utf-8")).hexdigest(),
             "pricing": pricing,
+            "knowledge": knowledge is not None,
         },
         "summary": summarize(results, pricing),
         "results": results,
@@ -228,6 +249,12 @@ def main() -> None:
     if not os.environ.get("DEEPSEEK_API_KEY"):
         raise SystemExit("未设置 DEEPSEEK_API_KEY，请先在当前终端设置后再运行。")
 
+    # The knowledge cases need search_knowledge; without it they would fail
+    # for a configuration reason, not because of the Agent.
+    knowledge = _knowledge_searcher()
+    if knowledge is None:
+        raise SystemExit("未设置 EMBEDDING_API_KEY / EMBEDDING_BASE_URL，知识问答用例需要它们，见 .env.example。")
+
     with OpenAI(
         api_key=os.environ["DEEPSEEK_API_KEY"],
         base_url=DEEPSEEK_BASE_URL,
@@ -241,6 +268,7 @@ def main() -> None:
                 model=model,
                 report_dir=REPORT_DIR,
                 pricing=pricing,
+                knowledge=knowledge,
             )
         except EvaluationAborted as error:
             raise SystemExit(f"评测已停止：{error}") from error

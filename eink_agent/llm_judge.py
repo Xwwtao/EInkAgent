@@ -14,7 +14,10 @@ import json
 import re
 from typing import Any
 
-from eink_agent.agent import SYSTEM_PROMPT as AGENT_SYSTEM_PROMPT
+from eink_agent.agent import KNOWLEDGE_PROMPT, SYSTEM_PROMPT
+
+# Evaluation runs give the Agent knowledge search, so its rules apply too.
+AGENT_SYSTEM_PROMPT = SYSTEM_PROMPT + KNOWLEDGE_PROMPT
 
 JUDGE_SYSTEM_PROMPT = (
     "You grade answers from a shopping assistant for E Ink devices. "

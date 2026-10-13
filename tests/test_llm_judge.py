@@ -210,13 +210,14 @@ def test_judge_report_prints_progress_before_each_call(tmp_path, capsys):
 
 
 def test_judge_sees_the_agent_rules_as_context():
-    from eink_agent.agent import SYSTEM_PROMPT
+    from eink_agent.agent import KNOWLEDGE_PROMPT, SYSTEM_PROMPT
 
     client = _client('{"grounded": true, "unsupported_claims": [], "responsive": true}')
     _judge(client)
 
     prompt = client.chat.completions.create.call_args.kwargs["messages"][-1]["content"]
-    assert f"<assistant_rules>\n{SYSTEM_PROMPT}\n</assistant_rules>" in prompt
+    # Evaluation runs use knowledge search, so the judge sees those rules too.
+    assert f"<assistant_rules>\n{SYSTEM_PROMPT}{KNOWLEDGE_PROMPT}\n</assistant_rules>" in prompt
     system = client.chat.completions.create.call_args.kwargs["messages"][0]["content"]
     assert "restates" in system and "assistant_rules" in system
 

@@ -20,6 +20,7 @@ CATEGORIES = (
     "prompt_injection",
     "multi_turn",
     "data_honesty",
+    "knowledge",
 )
 
 TOKENS_PER_PRICE_UNIT = 1_000_000
@@ -48,6 +49,8 @@ def _describe(requirement: dict[str, Any]) -> str:
         parts.append(str(requirement["arguments"]))
     if requirement.get("result_ids_include"):
         parts.append(f"finding devices {requirement['result_ids_include']}")
+    if requirement.get("result_docs_include"):
+        parts.append(f"finding documents {requirement['result_docs_include']}")
     return " ".join(parts)
 
 
@@ -83,6 +86,15 @@ def _check_option(option: list[dict[str, Any]], calls: list[dict[str, Any]]) -> 
                 )
                 continue
             candidates = with_ids
+
+        wanted_docs = set(requirement.get("result_docs_include", []))
+        if wanted_docs:
+            with_docs = [call for call in candidates if wanted_docs <= set(call.get("result_docs", []))]
+            if not with_docs:
+                found = sorted({d for call in candidates for d in call.get("result_docs", [])})
+                failures.append({"type": "wrong_documents", "detail": f"{label}: found {found}"})
+                continue
+            candidates = with_docs
 
         if "result_count" in requirement and all(
             call["result_count"] != requirement["result_count"] for call in candidates

@@ -75,20 +75,28 @@ def load_chunks(directory: Path = KNOWLEDGE_DIR) -> list[dict[str, Any]]:
     """One chunk per section, in file order, each carrying its metadata."""
     chunks = []
     for path in sorted(Path(directory).glob("*.md")):
-        doc = parse_document(path.stem, path.read_text(encoding="utf-8"))
-        for number, (section, text) in enumerate(doc["sections"], start=1):
-            chunks.append(
-                {
-                    "id": f"{doc['doc_id']}#{number}",
-                    "doc_id": doc["doc_id"],
-                    "title": doc["title"],
-                    "section": section,
-                    "text": text,
-                    "source_url": doc["sources"][0]["url"],
-                    "sources": doc["sources"],
-                    "verified_at": doc["verified_at"],
-                }
-            )
+        chunks += document_chunks(path)
+    return chunks
+
+
+def document_chunks(path: Path) -> list[dict[str, Any]]:
+    """Chunks of one knowledge file."""
+    path = Path(path)
+    doc = parse_document(path.stem, path.read_text(encoding="utf-8"))
+    chunks = []
+    for number, (section, text) in enumerate(doc["sections"], start=1):
+        chunks.append(
+            {
+                "id": f"{doc['doc_id']}#{number}",
+                "doc_id": doc["doc_id"],
+                "title": doc["title"],
+                "section": section,
+                "text": text,
+                "source_url": doc["sources"][0]["url"],
+                "sources": doc["sources"],
+                "verified_at": doc["verified_at"],
+            }
+        )
     return chunks
 
 
@@ -244,6 +252,17 @@ class KnowledgeSearcher:
         self.embed = embed
         self.gate = gate
         self.k = k
+
+    def with_extra_documents(self, paths: list[Path | str]) -> "KnowledgeSearcher":
+        """A copy that also searches extra files, e.g. an evaluation-only
+        document with an injected instruction. The original is unchanged."""
+        extra = []
+        for path in paths:
+            path = Path(path)
+            extra += document_chunks(path if path.is_absolute() else PROJECT_DIR / path)
+        vectors = {**self.kb.vectors, **{chunk["id"]: self.embed(embedding_text(chunk)) for chunk in extra}}
+        kb = KnowledgeBase(self.kb.chunks + extra, vectors=vectors, embedding_model=self.kb.embedding_model)
+        return KnowledgeSearcher(kb, self.embed, gate=self.gate, k=self.k)
 
     def search(self, query: str) -> list[dict[str, Any]]:
         hits = self.kb.gated_hybrid_search(query, self.embed(query), k=self.k, gate=self.gate)
