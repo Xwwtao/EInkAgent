@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from pydantic import ValidationError
 
@@ -103,3 +105,14 @@ def test_execute_tool_rejects_too_few_comparison_ids():
             "compare_devices",
             {"device_ids": [1]},
         )
+
+
+def test_search_category_only_accepts_known_values():
+    with pytest.raises(ValidationError):
+        execute_tool("search_devices", {"category": "阅读器"})
+
+
+def test_search_tool_schema_lists_category_values():
+    category = SEARCH_DEVICES_TOOL["function"]["parameters"]["properties"]["category"]
+
+    assert {"reader", "note", "tablet"} <= set(json.dumps(category).replace('"', " ").split())
