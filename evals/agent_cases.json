@@ -461,7 +461,8 @@
         "无效",
         "正整数",
         "没有",
-        "大于"
+        "大于",
+        "不是有效"
       ],
       "answer_includes_all": [],
       "answer_excludes": []
