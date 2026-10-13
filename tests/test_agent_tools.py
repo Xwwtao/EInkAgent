@@ -7,6 +7,7 @@ from eink_agent.agent_tools import (
     COMPARE_DEVICES_TOOL,
     GET_DEVICE_DETAIL_TOOL,
     SEARCH_DEVICES_TOOL,
+    SEARCH_KNOWLEDGE_TOOL,
     execute_tool,
 )
 
@@ -116,3 +117,10 @@ def test_search_tool_schema_lists_category_values():
     category = SEARCH_DEVICES_TOOL["function"]["parameters"]["properties"]["category"]
 
     assert {"reader", "note", "tablet"} <= set(json.dumps(category).replace('"', " ").split())
+
+
+def test_knowledge_tool_asks_for_chinese_queries():
+    # d01 (evals/reports/20261013T143639Z): an English query missed the
+    # Chinese water-resistance document because its score fell below the gate.
+    description = SEARCH_KNOWLEDGE_TOOL["function"]["description"]
+    assert "Chinese" in description

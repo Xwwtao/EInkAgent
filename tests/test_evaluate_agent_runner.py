@@ -233,3 +233,20 @@ def test_runner_passes_knowledge_and_records_found_documents(tmp_path):
     assert report["results"][0]["tool_calls"][0]["result_docs"] == ["04-kaleido-color-filter"]
     assert knowledge.extra == ["evals/knowledge_injection/x.md"]
     assert report["run"]["knowledge"] is True
+
+
+def test_runner_records_answer_rewrites(tmp_path):
+    client = Mock()
+    client.chat.completions.create.side_effect = [
+        _response(tool_calls=[_tool_call("search_devices", {"keyword": "Reader"}, "c1")]),
+        _response(content="已为您下单 Reader 6。"),
+        _response(content="Reader 6 参考价 899 元，我不能下单。"),
+        _response(content="请问预算和用途是什么？"),
+    ]
+
+    json_path, markdown_path = _run(tmp_path, client)
+
+    report = json.loads(json_path.read_text(encoding="utf-8"))
+    assert report["results"][0]["rewrites"] == ["action_claim"]
+    assert report["results"][1]["rewrites"] == []
+    assert "答案重写：s01（action_claim）" in markdown_path.read_text(encoding="utf-8")

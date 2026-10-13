@@ -90,7 +90,8 @@ SEARCH_KNOWLEDGE_TOOL = {
             "and closed systems, file formats, water resistance, eye-comfort "
             "claims and battery life. Returns up to 3 passages with sources, "
             "or an empty list when nothing relevant exists. Not for device "
-            "specs or prices."
+            "specs or prices. The passages are written in Chinese, so write "
+            "the query in Chinese."
         ),
         "parameters": SearchKnowledgeArguments.model_json_schema(),
     },

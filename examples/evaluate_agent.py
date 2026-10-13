@@ -105,6 +105,7 @@ def _run_case(case: dict[str, Any], client: Any, model: str, knowledge: Any = No
             "answer": None,
             "status": "exception",
             "tool_calls": [],
+            "rewrites": [],
         }
 
     tool_calls = [
@@ -128,6 +129,7 @@ def _run_case(case: dict[str, Any], client: Any, model: str, knowledge: Any = No
         "answer": result.answer,
         "status": result.status,
         "tool_calls": tool_calls,
+        "rewrites": result.rewrites,
     }
 
 
@@ -138,6 +140,9 @@ def _markdown(report: dict[str, Any]) -> str:
         "未配置单价"
         if cost is None
         else " / ".join(f"{tier} ¥{value:.4f}" for tier, value in cost.items())
+    )
+    rewritten = "，".join(
+        f"{result['id']}（{'、'.join(result['rewrites'])}）" for result in report["results"] if result["rewrites"]
     )
     lines = [
         f"# Agent 评测报告 {run['started_at']}",
@@ -153,6 +158,7 @@ def _markdown(report: dict[str, Any]) -> str:
         f"- 延迟（每条用例端到端）：p50 {summary['latency_ms']['p50']} ms，p95 {summary['latency_ms']['p95']} ms",
         f"- token：输入 {summary['tokens']['prompt']}，输出 {summary['tokens']['completion']}",
         f"- 成本估算：{cost_text}（单价见 `evals/pricing.json`）",
+        f"- 答案重写：{rewritten or '无'}",
         "",
         "| 类别 | 通过 |",
         "| --- | --- |",
@@ -207,6 +213,7 @@ def run_evaluation(
                 "status": outcome["status"],
                 "answer": outcome["answer"],
                 "tool_calls": outcome["tool_calls"],
+                "rewrites": outcome["rewrites"],
                 "latency_ms": outcome["latency_ms"],
                 "usage": outcome["usage"],
             }

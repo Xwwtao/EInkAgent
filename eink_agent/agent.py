@@ -58,6 +58,14 @@ CLAIM_REWRITE_INSTRUCTION = (
     "using only the tool results, and state the limitation if relevant."
 )
 
+# The rewrite request arrives as a user message, so without this the model
+# apologised to the user for a draft they never saw (k06,
+# evals/reports/20261013T143639Z).
+DRAFT_NOT_SHOWN_INSTRUCTION = (
+    "The user has not seen your previous draft: do not mention it or "
+    "apologise for it, just give the rewritten answer."
+)
+
 FIELD_NAME_REWRITE_INSTRUCTION = (
     "Your answer shows internal field names ({fields}). Rewrite it in plain "
     "language for the user, e.g. say 'closed system' instead of "
@@ -106,13 +114,16 @@ class AgentResult:
     """Final answer, every attempted tool call, and how the run ended.
 
     ``model_calls`` records latency and token usage for every model request,
-    for evaluation reports (AGENTS.md section 7).
+    for evaluation reports (AGENTS.md section 7). ``rewrites`` names why the
+    answer guard asked for a rewrite ("action_claim", "field_names"), so a
+    report shows which answers passed only after one.
     """
 
     answer: str
     tool_trace: list[dict[str, Any]]
     status: AgentStatus = "ok"
     model_calls: list[dict[str, Any]] = field(default_factory=list)
+    rewrites: list[str] = field(default_factory=list)
 
 
 class ToolCallError(Exception):
@@ -264,6 +275,7 @@ def _rewrite_instruction(claims: list[str], field_names: list[str]) -> str:
         parts.append(CLAIM_REWRITE_INSTRUCTION.format(claims="、".join(claims)))
     if field_names:
         parts.append(FIELD_NAME_REWRITE_INSTRUCTION.format(fields=", ".join(field_names)))
+    parts.append(DRAFT_NOT_SHOWN_INSTRUCTION)
     return " ".join(parts)
 
 
@@ -313,7 +325,7 @@ def run_agent(
     tool_trace: list[dict[str, Any]] = []
     model_calls: list[dict[str, Any]] = []
     consecutive_failures = 0
-    rewrite_requested = False
+    rewrites: list[str] = []
 
     for round_index in range(max_rounds):
         # On the last round the model must answer from what it already has,
@@ -343,22 +355,25 @@ def run_agent(
         if not tool_calls:
             answer = (message.content or "").strip()
             if not answer or has_leaked_tool_markup(answer):
-                return AgentResult(DEGRADED_ANSWER, tool_trace, "degraded", model_calls)
+                return AgentResult(DEGRADED_ANSWER, tool_trace, "degraded", model_calls, rewrites)
 
             claims = find_unexecuted_action_claims(answer)
             field_names = find_internal_field_names(answer)
             if not claims and not field_names:
-                return AgentResult(answer, tool_trace, "ok", model_calls)
+                return AgentResult(answer, tool_trace, "ok", model_calls, rewrites)
 
-            if rewrite_requested:
+            if rewrites:
                 # A false completion claim misleads the user and is blocked;
                 # a leftover field name is only awkward wording, so the
                 # answer is kept.
                 if claims:
-                    return AgentResult(BLOCKED_ANSWER, tool_trace, "blocked", model_calls)
-                return AgentResult(answer, tool_trace, "ok", model_calls)
+                    return AgentResult(BLOCKED_ANSWER, tool_trace, "blocked", model_calls, rewrites)
+                return AgentResult(answer, tool_trace, "ok", model_calls, rewrites)
 
-            rewrite_requested = True
+            if claims:
+                rewrites.append("action_claim")
+            if field_names:
+                rewrites.append("field_names")
             messages.append({"role": "assistant", "content": answer})
             messages.append(
                 {
@@ -381,6 +396,6 @@ def run_agent(
                 consecutive_failures = 0
 
         if consecutive_failures >= MAX_CONSECUTIVE_TOOL_FAILURES:
-            return AgentResult(DEGRADED_ANSWER, tool_trace, "degraded", model_calls)
+            return AgentResult(DEGRADED_ANSWER, tool_trace, "degraded", model_calls, rewrites)
 
-    return AgentResult(DEGRADED_ANSWER, tool_trace, "degraded", model_calls)
+    return AgentResult(DEGRADED_ANSWER, tool_trace, "degraded", model_calls, rewrites)
