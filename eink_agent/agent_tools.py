@@ -68,6 +68,34 @@ AGENT_TOOLS = [
     COMPARE_DEVICES_TOOL,
 ]
 
+class SearchKnowledgeArguments(BaseModel):
+    """Arguments accepted by the knowledge-search tool."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    query: str = Field(
+        min_length=1,
+        max_length=200,
+        description="The user's question about E Ink technology, in plain words.",
+    )
+
+
+SEARCH_KNOWLEDGE_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "search_knowledge",
+        "description": (
+            "Search short explanations of E Ink technology: screen panels "
+            "(Carta, Kaleido, Gallery), front and warm light, styluses, open "
+            "and closed systems, file formats, water resistance, eye-comfort "
+            "claims and battery life. Returns up to 3 passages with sources, "
+            "or an empty list when nothing relevant exists. Not for device "
+            "specs or prices."
+        ),
+        "parameters": SearchKnowledgeArguments.model_json_schema(),
+    },
+}
+
 _TOOL_REGISTRY = {
     "search_devices": (
         DeviceRequirements,
@@ -87,14 +115,17 @@ class UnknownToolError(ValueError):
     """Raised when the model asks for a tool outside the allowlist."""
 
 
-def tool_names() -> list[str]:
+def tool_names(include_knowledge: bool = False) -> list[str]:
     """Return the allowlisted tool names in the order shown to the model."""
-    return [tool["function"]["name"] for tool in AGENT_TOOLS]
+    tools = AGENT_TOOLS + ([SEARCH_KNOWLEDGE_TOOL] if include_knowledge else [])
+    return [tool["function"]["name"] for tool in tools]
 
 
 def describe_tool_arguments(name: str) -> dict[str, Any]:
     """Summarize a tool's parameters so the model can correct its call."""
-    argument_model, _ = _TOOL_REGISTRY[name]
+    argument_model = (
+        SearchKnowledgeArguments if name == "search_knowledge" else _TOOL_REGISTRY[name][0]
+    )
     schema = argument_model.model_json_schema()
 
     return {
@@ -106,8 +137,17 @@ def describe_tool_arguments(name: str) -> dict[str, Any]:
 def execute_tool(
     name: str,
     arguments: dict[str, object],
+    knowledge: Any = None,
 ) -> Any:
-    """Validate and execute one allowlisted tool."""
+    """Validate and execute one allowlisted tool.
+
+    ``knowledge`` is the searcher behind search_knowledge; without it the
+    tool does not exist.
+    """
+    if name == "search_knowledge" and knowledge is not None:
+        validated = SearchKnowledgeArguments.model_validate(arguments)
+        return knowledge.search(validated.query)
+
     registration = _TOOL_REGISTRY.get(name)
 
     if registration is None:

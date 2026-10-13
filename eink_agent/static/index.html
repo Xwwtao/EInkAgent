@@ -123,6 +123,12 @@
   .source a { color: var(--accent); text-decoration: none; }
   .source a:hover { text-decoration: underline; }
 
+  .sources { font-size: 13px; background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 10px 14px; }
+  .sources-title { color: var(--ink-faint); font-size: 12px; margin-bottom: 4px; }
+  .sources ul { margin: 0; padding-left: 1.2em; }
+  .sources a { color: var(--accent); text-decoration: none; }
+  .sources a:hover { text-decoration: underline; }
+  .muted { color: var(--ink-faint); font-size: 12px; }
   details.trace { font-size: 13px; color: var(--ink-soft); }
   details.trace summary { cursor: pointer; color: var(--ink-faint); list-style: none; user-select: none; }
   details.trace summary::-webkit-details-marker { display: none; }
@@ -215,6 +221,7 @@
     "比较一下 Kindle Paperwhite 2026 和 Kobo Clara BW",
     "10 寸左右的彩色手写本有哪些？",
     "我想买个阅读器",
+    "Kaleido 3 彩色屏为什么彩色没那么清楚？",
   ];
 
   const thread = document.getElementById("thread");
@@ -329,11 +336,33 @@
     </div>`;
   }
 
+  // ---------- knowledge sources ----------
+  function collectPassages(toolCalls) {
+    const byId = new Map();
+    for (const call of toolCalls) {
+      if (call.name !== "search_knowledge" || call.status !== "ok" || !Array.isArray(call.result)) continue;
+      for (const passage of call.result) byId.set(passage.chunk_id, passage);
+    }
+    return [...byId.values()];
+  }
+
+  function renderSources(passages) {
+    if (!passages.length) return "";
+    const items = passages.map((p) => {
+      const url = safeUrl(p.source_url);
+      const label = `${escapeHtml(p.title)} · ${escapeHtml(p.section)}`;
+      return `<li>${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${label}</a>` : label}` +
+        ` <span class="muted">核验于 ${escapeHtml(p.verified_at || "")}</span></li>`;
+    }).join("");
+    return `<div class="sources"><div class="sources-title">参考资料</div><ul>${items}</ul></div>`;
+  }
+
   // ---------- trace ----------
   const TOOL_LABELS = {
     search_devices: "条件搜索",
     get_device_detail: "查看详情",
     compare_devices: "设备对比",
+    search_knowledge: "知识检索",
   };
 
   function renderTrace(body) {
@@ -387,6 +416,7 @@
       (NOTICES[body.status] ? `<div class="notice ${body.status}">${NOTICES[body.status]}</div>` : "") +
       `<div class="answer">${renderMarkdown(body.answer)}</div>` +
       (devices.length ? `<div class="cards">${devices.map(renderCard).join("")}</div>` : "") +
+      renderSources(collectPassages(body.tool_calls)) +
       renderTrace(body);
   }
 

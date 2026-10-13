@@ -147,3 +147,66 @@ def test_home_page_is_served():
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/html")
     assert "EInkAgent" in response.text
+
+
+def test_runtime_knowledge_is_off_without_embedding_settings(monkeypatch):
+    from eink_agent import api
+
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
+    monkeypatch.delenv("EMBEDDING_API_KEY", raising=False)
+    monkeypatch.delenv("EMBEDDING_BASE_URL", raising=False)
+    api._knowledge_searcher.cache_clear()
+
+    assert api.get_agent_runtime().knowledge is None
+
+
+def test_runtime_knowledge_is_on_with_embedding_settings(monkeypatch):
+    from eink_agent import api
+    from eink_agent.knowledge import KnowledgeSearcher
+
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
+    monkeypatch.setenv("EMBEDDING_API_KEY", "embed-key")
+    monkeypatch.setenv("EMBEDDING_BASE_URL", "https://example.com/v1")
+    api._knowledge_searcher.cache_clear()
+
+    knowledge = api.get_agent_runtime().knowledge
+
+    assert isinstance(knowledge, KnowledgeSearcher)
+    assert len(knowledge.kb.vectors) == len(knowledge.kb.chunks)
+    api._knowledge_searcher.cache_clear()
+
+
+def test_agent_endpoint_passes_knowledge_to_the_agent():
+    class FakeKnowledge:
+        def search(self, query):
+            return [{"chunk_id": "x#1", "title": "T", "section": "S", "text": "内容", "source_url": "https://e.com", "verified_at": "2026-10-13"}]
+
+    client = Mock()
+    client.chat.completions.create.side_effect = [
+        _response(tool_calls=[_tool_call("search_knowledge", {"query": "彩色屏"}, "k1")]),
+        _response(content="见资料 T（https://e.com）。"),
+    ]
+    app.dependency_overrides[get_agent_runtime] = lambda: AgentRuntime(client=client, model="m", knowledge=FakeKnowledge())
+    try:
+        body = CLIENT.post("/agent", json={"message": "彩色屏是什么"}).json()
+    finally:
+        app.dependency_overrides.clear()
+
+    assert body["tool_calls"][0]["name"] == "search_knowledge"
+    assert body["tool_calls"][0]["result"][0]["source_url"] == "https://e.com"
+
+
+def test_runtime_refuses_an_index_built_with_another_embedding_model(monkeypatch):
+    import pytest
+
+    from eink_agent import api
+
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
+    monkeypatch.setenv("EMBEDDING_API_KEY", "embed-key")
+    monkeypatch.setenv("EMBEDDING_BASE_URL", "https://example.com/v1")
+    monkeypatch.setenv("EMBEDDING_MODEL", "some-other-model")
+    api._knowledge_searcher.cache_clear()
+
+    with pytest.raises(ValueError, match="some-other-model"):
+        api.get_agent_runtime()
+    api._knowledge_searcher.cache_clear()

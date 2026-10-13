@@ -15,11 +15,13 @@ from pydantic import BaseModel, ConfigDict, Field, PositiveInt, StringConstraint
 
 from device_repository import compare_devices, get_device_detail, search_devices
 from eink_agent.agent import run_agent
+from eink_agent.knowledge import KnowledgeBase, KnowledgeSearcher, embed_texts
 
 STATIC_DIR = FilePath(__file__).resolve().parent / "static"
 
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 DEFAULT_MODEL = "deepseek-flash"
+DEFAULT_EMBEDDING_MODEL = "qwen3.7-text-embedding-flash"
 
 # The SDK retries timeouts, 429 and 5xx responses itself; 400 and 401 are
 # not retried because sending the same request again cannot succeed.
@@ -96,10 +98,11 @@ class AgentResponse(BaseModel):
 
 @dataclass(frozen=True)
 class AgentRuntime:
-    """The model client and model name used to answer requests."""
+    """The model client, model name and optional knowledge searcher."""
 
     client: Any
     model: str
+    knowledge: Any = None
 
 
 @lru_cache(maxsize=1)
@@ -110,6 +113,32 @@ def _deepseek_client(api_key: str) -> OpenAI:
         base_url=DEEPSEEK_BASE_URL,
         timeout=MODEL_TIMEOUT_SECONDS,
         max_retries=MODEL_MAX_RETRIES,
+    )
+
+
+@lru_cache(maxsize=1)
+def _knowledge_searcher() -> KnowledgeSearcher | None:
+    """Knowledge search is on only when an embedding service is configured.
+
+    Built once: the corpus and vector index are loaded at first use. A
+    corpus that no longer matches the index raises here, at startup of the
+    feature, instead of returning stale passages.
+    """
+    api_key = os.environ.get("EMBEDDING_API_KEY")
+    base_url = os.environ.get("EMBEDDING_BASE_URL")
+    if not api_key or not base_url:
+        return None
+
+    client = OpenAI(api_key=api_key, base_url=base_url, timeout=MODEL_TIMEOUT_SECONDS, max_retries=MODEL_MAX_RETRIES)
+    model = os.environ.get("EMBEDDING_MODEL", DEFAULT_EMBEDDING_MODEL)
+    kb = KnowledgeBase.from_files()
+    if kb.embedding_model != model:
+        # Vectors from different models are not comparable: every score
+        # would be meaningless without any error.
+        raise ValueError(f"Knowledge index was built with {kb.embedding_model}, not {model}; rebuild it.")
+    return KnowledgeSearcher(
+        kb,
+        embed=lambda text: embed_texts(client, model, [text])[0],
     )
 
 
@@ -128,6 +157,7 @@ def get_agent_runtime() -> AgentRuntime:
     return AgentRuntime(
         client=_deepseek_client(api_key),
         model=os.environ.get("DEEPSEEK_MODEL", DEFAULT_MODEL),
+        knowledge=_knowledge_searcher(),
     )
 
 
@@ -160,6 +190,7 @@ def ask_agent(
             client=runtime.client,
             model=runtime.model,
             history=[message.model_dump() for message in request.history],
+            knowledge=runtime.knowledge,
         )
     except openai.APITimeoutError as error:
         raise HTTPException(

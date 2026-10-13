@@ -245,3 +245,28 @@ def test_gated_hybrid_returns_nothing_when_the_best_vector_match_is_weak(corpus_
 
     hits = kb.gated_hybrid_search("彩色分辨率", [0.8, 0.6], k=3, gate=0.5)
     assert hits[0]["id"] == "01-kaleido#2"
+
+
+def test_searcher_embeds_the_query_and_applies_the_gate(corpus_dir):
+    from eink_agent.knowledge import KnowledgeSearcher
+
+    chunks = load_chunks(corpus_dir)
+    vectors = {"01-kaleido#1": [1.0, 0.0], "01-kaleido#2": [0.8, 0.6], "02-pen#1": [0.0, 1.0]}
+    asked = []
+    searcher = KnowledgeSearcher(
+        KnowledgeBase(chunks, vectors=vectors),
+        embed=lambda text: asked.append(text) or ([0.8, 0.6] if "分辨率" in text else [-1.0, 0.0]),
+        gate=0.5,
+    )
+
+    hits = searcher.search("彩色分辨率")
+    assert asked == ["彩色分辨率"]
+    assert hits[0] == {
+        "chunk_id": "01-kaleido#2",
+        "title": "Kaleido 彩色墨水屏",
+        "section": "分辨率",
+        "text": chunks[1]["text"],
+        "source_url": "https://www.eink.com/kaleido",
+        "verified_at": "2026-10-13",
+    }
+    assert searcher.search("售后") == []

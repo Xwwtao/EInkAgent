@@ -124,8 +124,14 @@ def _cosine(a: list[float], b: list[float]) -> float:
 class KnowledgeBase:
     """Chunks plus the keyword index and, when available, chunk vectors."""
 
-    def __init__(self, chunks: list[dict[str, Any]], vectors: dict[str, list[float]] | None = None):
+    def __init__(
+        self,
+        chunks: list[dict[str, Any]],
+        vectors: dict[str, list[float]] | None = None,
+        embedding_model: str | None = None,
+    ):
         self.chunks = chunks
+        self.embedding_model = embedding_model
         self.by_id = {chunk["id"]: chunk for chunk in chunks}
         self.vectors = vectors or {}
         self._tokens = [tokenize(f"{chunk['title']} {chunk['section']} {chunk['text']}") for chunk in chunks]
@@ -146,7 +152,7 @@ class KnowledgeBase:
         index = json.loads(Path(index_path).read_text(encoding="utf-8"))
         if index.get("corpus_sha256") != corpus_sha256(directory):
             raise ValueError("Vector index does not match the knowledge corpus; rebuild it.")
-        return cls(chunks, vectors=index["vectors"])
+        return cls(chunks, vectors=index["vectors"], embedding_model=index.get("model"))
 
     def _hit(self, chunk_id: str, score: float) -> dict[str, Any]:
         return {**self.by_id[chunk_id], "score": round(score, 4)}
@@ -216,3 +222,29 @@ def embed_texts(client: Any, model: str, texts: list[str], batch_size: int = EMB
         response = client.embeddings.create(model=model, input=texts[start:start + batch_size])
         vectors += [item.embedding for item in response.data]
     return vectors
+
+
+# Chosen on evals/reports/retrieval_20261013T133030Z (decision 008): every
+# unanswerable question returned nothing, two answerable ones were lost.
+KNOWLEDGE_GATE = 0.55
+KNOWLEDGE_TOP_K = 3
+
+HIT_FIELDS = ("title", "section", "text", "source_url", "verified_at")
+
+
+class KnowledgeSearcher:
+    """What the Agent's search_knowledge tool calls.
+
+    ``embed`` turns the query into a vector; it wraps the network client,
+    which the caller creates and passes in.
+    """
+
+    def __init__(self, kb: KnowledgeBase, embed: Any, gate: float = KNOWLEDGE_GATE, k: int = KNOWLEDGE_TOP_K):
+        self.kb = kb
+        self.embed = embed
+        self.gate = gate
+        self.k = k
+
+    def search(self, query: str) -> list[dict[str, Any]]:
+        hits = self.kb.gated_hybrid_search(query, self.embed(query), k=self.k, gate=self.gate)
+        return [{"chunk_id": hit["id"], **{name: hit[name] for name in HIT_FIELDS}} for hit in hits]
