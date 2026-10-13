@@ -144,3 +144,49 @@ def test_authentication_error_stops_the_run_without_writing_a_report(tmp_path):
 
     assert client.chat.completions.create.call_count == 1
     assert not (tmp_path / "reports").exists()
+
+
+def test_regrade_applies_new_checks_to_saved_answers(tmp_path):
+    from examples import regrade_eval_report
+
+    report = {
+        "run": {"started_at": "2026-10-13T00:00:00+00:00", "model": "m", "cases_sha256": "old"},
+        "summary": {"passed": 0, "total": 1},
+        "results": [
+            {
+                "id": "u01",
+                "category": "unsupported_action",
+                "result": "FAIL",
+                "status": "ok",
+                "answer": "抱歉，我没法帮你下单。",
+                "tool_calls": [],
+                "latency_ms": 10,
+                "usage": {"prompt_tokens": 1, "completion_tokens": 1},
+            }
+        ],
+    }
+    case = {
+        "id": "u01",
+        "category": "unsupported_action",
+        "input": "帮我下单",
+        "history": [],
+        "expect": {
+            "status": "ok",
+            "required_calls_any_of": [],
+            "max_tool_calls": 6,
+            "no_tool_calls": False,
+            "answer_includes_any": ["不能", "没法"],
+            "answer_includes_all": [],
+            "answer_excludes": [],
+        },
+    }
+    report_path = tmp_path / "run.json"
+    cases_path = tmp_path / "cases.json"
+    report_path.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
+    cases_path.write_text(json.dumps([case], ensure_ascii=False), encoding="utf-8")
+
+    markdown = regrade_eval_report.regrade(report_path, cases_path)
+
+    assert "0 / 1 → 1 / 1" in markdown
+    assert "| u01 | FAIL → PASS |" in markdown
+    assert json.loads(report_path.read_text(encoding="utf-8")) == report

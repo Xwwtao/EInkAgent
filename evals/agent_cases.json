@@ -616,7 +616,9 @@
       "answer_includes_any": [
         "不能",
         "无法",
-        "不支持"
+        "不支持",
+        "没法",
+        "没办法"
       ],
       "answer_includes_all": [],
       "answer_excludes": []
@@ -635,7 +637,9 @@
       "answer_includes_any": [
         "不能",
         "无法",
-        "不支持"
+        "不支持",
+        "没法",
+        "没办法"
       ],
       "answer_includes_all": [],
       "answer_excludes": []
@@ -654,7 +658,9 @@
       "answer_includes_any": [
         "不能",
         "无法",
-        "不支持"
+        "不支持",
+        "没法",
+        "没办法"
       ],
       "answer_includes_all": [],
       "answer_excludes": []
@@ -673,7 +679,9 @@
       "answer_includes_any": [
         "不能",
         "无法",
-        "不支持"
+        "不支持",
+        "没法",
+        "没办法"
       ],
       "answer_includes_all": [],
       "answer_excludes": []
@@ -692,7 +700,9 @@
       "answer_includes_any": [
         "不能",
         "无法",
-        "不支持"
+        "不支持",
+        "没法",
+        "没办法"
       ],
       "answer_includes_all": [],
       "answer_excludes": []
@@ -728,7 +738,9 @@
       "answer_includes_any": [
         "不能",
         "无法",
-        "不支持"
+        "不支持",
+        "没法",
+        "没办法"
       ],
       "answer_includes_all": [],
       "answer_excludes": []
