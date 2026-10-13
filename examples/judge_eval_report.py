@@ -20,6 +20,7 @@ from eink_agent.llm_judge import calibrate, judge_answer
 
 DEFAULT_JUDGE_MODEL = "qwen3.8-flash"
 LABELS_DIR = Path(__file__).resolve().parents[1] / "evals" / "labels"
+FAULTS_DIR = Path(__file__).resolve().parents[1] / "evals" / "faults"
 
 
 def _markdown(report: dict[str, Any], judged: dict[str, Any], calibration: dict[str, int] | None) -> str:
@@ -49,6 +50,15 @@ def _markdown(report: dict[str, Any], judged: dict[str, Any], calibration: dict[
         ]
     else:
         lines += ["尚无人工标注，未做校准；在校准之前不要引用上面的数字。", ""]
+    detection = judged.get("fault_detection")
+    if detection:
+        lines += [
+            "## 故障注入（每条都含一句与工具结果矛盾的陈述）",
+            "",
+            f"- 故障注入检出：{detection['detected']} / {detection['injected'] - detection['errors']}",
+            f"- 漏判：{', '.join(detection['missed']) or '无'}；裁判出错 {detection['errors']} 条",
+            "",
+        ]
     lines += ["## 判为无依据或不回应的回答", "", "| 用例 | grounded | responsive | 无依据的陈述 |", "| --- | --- | --- | --- |"]
     for case_id, verdict in verdicts.items():
         if "error" in verdict:
@@ -65,6 +75,7 @@ def run_judge(
     client: Any,
     model: str,
     labels_dir: Path = LABELS_DIR,
+    faults_dir: Path = FAULTS_DIR,
     extra_body: dict[str, Any] | None = None,
 ) -> tuple[Path, Path]:
     """Judge every answered case in a report and write the judge files."""
@@ -86,6 +97,30 @@ def run_judge(
         )
         print(f"    {verdicts[result['id']]}", flush=True)
 
+    faults_path = Path(faults_dir) / report_path.name
+    fault_detection = None
+    if faults_path.exists():
+        faults = json.loads(faults_path.read_text(encoding="utf-8"))
+        detected, missed, errors = 0, [], 0
+        for index, fault in enumerate(faults, start=1):
+            print(f"[故障 {index}/{len(faults)}] 正在评判 {fault['id']} …", flush=True)
+            verdict = judge_answer(
+                extra_body=extra_body,
+                client=client,
+                model=model,
+                question=fault["input"],
+                history=fault["history"],
+                tool_calls=fault["tool_calls"],
+                answer=fault["answer"],
+            )
+            if "error" in verdict:
+                errors += 1
+            elif verdict["grounded"]:
+                missed.append(fault["id"])
+            else:
+                detected += 1
+        fault_detection = {"injected": len(faults), "detected": detected, "missed": missed, "errors": errors}
+
     judged = {
         "report": report_path.name,
         "judge_model": model,
@@ -97,6 +132,8 @@ def run_judge(
     if labels_path.exists():
         calibration = calibrate(verdicts, json.loads(labels_path.read_text(encoding="utf-8")))
         judged["calibration"] = calibration
+    if fault_detection:
+        judged["fault_detection"] = fault_detection
 
     json_path = report_path.with_name(f"judge_{report_path.stem}.json")
     markdown_path = report_path.with_name(f"judge_{report_path.stem}.md")

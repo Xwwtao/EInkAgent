@@ -207,3 +207,95 @@ def test_judge_report_prints_progress_before_each_call(tmp_path, capsys):
     judge_eval_report.run_judge(report_path, client=client, model="m", labels_dir=tmp_path / "labels")
 
     assert "[1/1] 正在评判 d01" in capsys.readouterr().out
+
+
+def test_judge_sees_the_agent_rules_as_context():
+    from eink_agent.agent import SYSTEM_PROMPT
+
+    client = _client('{"grounded": true, "unsupported_claims": [], "responsive": true}')
+    _judge(client)
+
+    prompt = client.chat.completions.create.call_args.kwargs["messages"][-1]["content"]
+    assert f"<assistant_rules>\n{SYSTEM_PROMPT}\n</assistant_rules>" in prompt
+    system = client.chat.completions.create.call_args.kwargs["messages"][0]["content"]
+    assert "restates" in system and "assistant_rules" in system
+
+
+FAULT_REPORT = {
+    "run": {"started_at": "t", "model": "m"},
+    "results": [
+        {
+            "id": "a",
+            "category": "single_search",
+            "input": "q",
+            "history": [],
+            "answer": "Leaf5+ 参考价 1899 元。",
+            "status": "ok",
+            "tool_calls": [
+                {
+                    "name": "search_devices",
+                    "arguments": {},
+                    "status": "ok",
+                    "result": [
+                        {"id": 38, "brand": "BOOX", "model": "Leaf5+", "weight_g": 192,
+                         "lowest_price_cny": 1899, "supports_stylus": 1, "is_waterproof": None},
+                        {"id": 17, "brand": "Kobo", "model": "Libra Colour", "weight_g": 200,
+                         "lowest_price_cny": 1846, "supports_stylus": 1, "is_waterproof": 1},
+                    ],
+                }
+            ],
+        },
+        {"id": "b", "category": "clarification", "input": "q", "history": [],
+         "answer": "预算多少？", "status": "ok", "tool_calls": []},
+    ],
+}
+
+
+def test_fault_injection_appends_one_contradicting_claim_per_fault():
+    from examples.inject_faults import generate_faults
+
+    faults = generate_faults(FAULT_REPORT, limit=4)
+
+    assert [fault["fault_type"] for fault in faults] == ["weight", "waterproof", "price", "stylus"]
+    weight = faults[0]
+    assert weight["id"] == "a#weight"
+    assert weight["source_case"] == "a"
+    assert weight["answer"] == "Leaf5+ 参考价 1899 元。\n\nBOOX Leaf5+ 重 252 克。"
+    assert faults[1]["claim"] == "BOOX Leaf5+ 支持 IPX8 防水。"
+    assert faults[2]["claim"] == "BOOX Leaf5+ 现价 1599 元。"
+    # Each fault contradicts the tool result: Leaf5+ supports a stylus.
+    assert faults[3]["claim"].endswith("不支持手写笔。")
+
+
+def test_fault_injection_is_deterministic_and_skips_cases_without_devices():
+    from examples.inject_faults import generate_faults
+
+    assert generate_faults(FAULT_REPORT, limit=10) == generate_faults(FAULT_REPORT, limit=10)
+    assert all(fault["source_case"] == "a" for fault in generate_faults(FAULT_REPORT, limit=10))
+
+
+def test_judge_report_measures_detection_on_injected_faults(tmp_path):
+    from examples.inject_faults import generate_faults
+
+    report_path = tmp_path / "20261014T000000Z.json"
+    report_path.write_text(json.dumps(FAULT_REPORT, ensure_ascii=False), encoding="utf-8")
+    faults_dir = tmp_path / "faults"
+    faults_dir.mkdir()
+    (faults_dir / report_path.name).write_text(
+        json.dumps(generate_faults(FAULT_REPORT, limit=2), ensure_ascii=False), encoding="utf-8"
+    )
+    client = Mock()
+    client.chat.completions.create.side_effect = [
+        Mock(choices=[Mock(message=Mock(content='{"grounded": true, "unsupported_claims": [], "responsive": true}'))]),
+        Mock(choices=[Mock(message=Mock(content='{"grounded": true, "unsupported_claims": [], "responsive": true}'))]),
+        Mock(choices=[Mock(message=Mock(content='{"grounded": false, "unsupported_claims": ["x"], "responsive": true}'))]),
+        Mock(choices=[Mock(message=Mock(content='{"grounded": true, "unsupported_claims": [], "responsive": true}'))]),
+    ]
+
+    json_path, markdown_path = judge_eval_report.run_judge(
+        report_path, client=client, model="m", labels_dir=tmp_path / "labels", faults_dir=faults_dir
+    )
+
+    judged = json.loads(json_path.read_text(encoding="utf-8"))
+    assert judged["fault_detection"] == {"injected": 2, "detected": 1, "missed": ["a#waterproof"], "errors": 0}
+    assert "故障注入检出：1 / 2" in markdown_path.read_text(encoding="utf-8")
