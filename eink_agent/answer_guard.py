@@ -90,3 +90,14 @@ FIELD_NAME_PATTERN = re.compile(
 def find_internal_field_names(answer: str) -> list[str]:
     """Return internal field names shown to the user, in order, once each."""
     return list(dict.fromkeys(FIELD_NAME_PATTERN.findall(answer)))
+
+
+# Tool-call syntax a model may print as plain text when it still wants to call
+# a tool but is not allowed to (seen with DeepSeek in evaluation run
+# 20261013T122005Z). Such text must never be shown to users.
+TOOL_MARKUP_PATTERN = re.compile(r"DSML|<｜|｜>|tool▁call|invoke name=")
+
+
+def has_leaked_tool_markup(answer: str) -> bool:
+    """Return True when the answer contains raw tool-call syntax."""
+    return bool(TOOL_MARKUP_PATTERN.search(answer))

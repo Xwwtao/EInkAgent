@@ -3,6 +3,7 @@
 import pytest
 
 from eink_agent.answer_guard import (
+    has_leaked_tool_markup,
     find_internal_field_names,
     find_unexecuted_action_claims,
 )
@@ -73,3 +74,20 @@ def test_each_field_name_is_reported_once():
     answer = "is_color=1；is_color 表示彩色。"
 
     assert find_internal_field_names(answer) == ["is_color"]
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        # Verbatim shape from evaluation run 20261013T122005Z, case n03.
+        '<｜｜DSML｜｜ calls>\n<｜｜DSML｜｜ invoke name="search_devices">\n</｜｜DSML｜｜ calls>',
+        '<｜tool▁calls▁begin｜><｜tool▁call▁begin｜>function',
+        'invoke name="search_devices"',
+    ],
+)
+def test_leaked_tool_call_markup_is_detected(answer):
+    assert has_leaked_tool_markup(answer)
+
+
+def test_normal_answer_has_no_tool_markup():
+    assert not has_leaked_tool_markup("300 元以内没有符合条件的设备，最便宜的是 Kobo Clara BW。")

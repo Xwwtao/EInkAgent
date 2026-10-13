@@ -85,7 +85,9 @@ result counts and failures.
   sites are image-based. The 2026 Kindles come from Amazon product pages;
   older Kindles come from Amazon press releases, with some fields taken from
   Wikipedia and marked in the `notes` column.
-  Fields a source does not state are stored as NULL and reported as unknown,
+  Values were collected from manufacturer, retail and media pages, plus the
+  author's own checks where vendors do not publish a field. Fields that could
+  not be determined are stored as NULL and reported as unknown,
   so filters such as "no stylus" do not match devices whose stylus support
   is unpublished.
 - **Converted prices are references**, not what a buyer in China pays after
@@ -93,13 +95,59 @@ result counts and failures.
 - **The answer checks are keyword rules.** They miss paraphrases, and a
   refusal word in the same sentence hides a claim (for example "我无法处理
   退款，但已帮您下单了"). See `docs/learning/01-agent-walkthrough.md`.
-- **No accuracy figure is published yet.** The 20 cases in
-  `evals/agent_cases.json` were written for the old fictional data and only
-  check which tool and arguments were chosen. Their run reports were not
-  committed, so earlier results cannot be verified. A new evaluation with
-  committed reports is the next milestone (P2).
+- **The evaluation checks wording with keywords.** A correct answer phrased
+  differently can fail, and a fluent but unsupported sentence can pass; see
+  [Evaluation](#evaluation).
 - Conversations are lost when the page is refreshed.
 - The agent cannot buy anything or change data; all tools are read-only.
+
+## Evaluation
+
+35 hand-written cases in `evals/agent_cases.json` cover single searches,
+multi-step lookups, empty results, invalid parameters, clarification,
+unsupported actions, prompt injection, multi-turn follow-ups and data
+honesty. A case passes only if the required tool calls succeed, return the
+expected number of rows or the expected devices, and the answer contains the
+expected facts without claiming an unexecuted action. Expected row counts are
+tied to the committed CSV data and checked by a unit test.
+
+**Latest result: 33 of 35 passed** — `evals/reports/20261013T122005Z.md`,
+`deepseek-flash`, single run on 2026-10-13 at commit `d2f7c28`.
+p50 latency 2.8 s, p95 6.2 s per case; 118,106 prompt and 14,339 completion
+tokens, about ¥0.09–0.18 for the whole run at the off-peak and peak prices in
+`evals/pricing.json`.
+
+The two failures:
+
+- **n03** returned DeepSeek's raw tool-call syntax as the answer after four
+  searches used up the rounds. Fixed afterwards in `04c241f` (the last round
+  now tells the model to answer, and leaked tool syntax is never shown); the
+  fix has unit tests but **has not been measured by a new run**.
+- **d01** answered correctly ("没有公开数据……无法确认") but missed the expected
+  keywords. Left as a failure: keyword lists are no longer extended to fit the
+  model's wording (see below).
+
+How the result got here, all reports committed in `evals/reports/`:
+
+| Run | Commit | Passed | What changed before it |
+| --- | --- | --- | --- |
+| 1 | `e512b64` | 31 / 35 | Baseline |
+| 2 | `7a115c3` | 29 / 35 | Nothing; measures run-to-run variation |
+| 3 | `001efca` | 34 / 35 | Name lookups check the devices found instead of keyword wording (5 of 6 earlier failures had correct answers) |
+| 4 | `2b78411` | 33 / 35 | `category` restricted to reader / note / tablet |
+| 5 | `d2f7c28` | 33 / 35 | Simplified Chinese reply rule |
+
+Every change to the cases was approved and is recorded with its reason in
+`docs/decisions/006-agent-evaluation.md`. After run 5 the keyword lists are
+frozen: correct answers with different wording are left for a model-based
+judge (planned) rather than patched case by case, so the cases do not drift
+toward the model's phrasing.
+
+```bash
+python -m examples.evaluate_agent                      # run all cases, write reports
+python -m examples.compare_eval_reports A.json B.json  # what changed between runs
+python -m examples.regrade_eval_report A.json          # re-grade a saved run with current cases
+```
 
 ## Architecture
 
@@ -163,7 +211,8 @@ python -m examples.smoke_test_agent
 - [x] v0.3 — Structured requirement parsing with an LLM
 - [x] v0.4 — Tool-calling agent
 - [x] v0.5 — Real data, tool-failure recovery, answer checks, `POST /agent`, chat UI
-- [ ] Evaluation on real data with committed reports (30+ cases)
+- [x] Evaluation on real data with committed reports (35 cases)
+- [ ] Model-based judge for answer quality, calibrated against hand labels
 - [ ] Retrieval over manuals and after-sales policies, with citations
 - [ ] Preference memory across turns
 

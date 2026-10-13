@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-flash",
+  "currency": "CNY",
+  "unit": "per_million_tokens",
+  "source": "DeepSeek 官网价格页，作者于 2026-10-11 截图提供；页面未给出空闲与高峰时段的具体时间",
+  "checked_at": "2026-10-11",
+  "tiers": {
+    "off_peak": {"input_cache_hit": 0.02, "input_cache_miss": 1, "output": 4},
+    "peak": {"input_cache_hit": 0.04, "input_cache_miss": 2, "output": 8}
+  }
+}

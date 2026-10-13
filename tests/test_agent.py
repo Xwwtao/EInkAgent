@@ -668,3 +668,69 @@ def test_rewrite_instruction_covers_claims_and_field_names_together():
 def test_system_prompt_does_not_model_field_names():
     assert "lowest_price_cny" not in SYSTEM_PROMPT
     assert "field names" in SYSTEM_PROMPT
+
+
+def test_each_model_call_records_latency_and_tokens():
+    first = _response(tool_calls=[_raw_tool_call("search_devices", "{}", "c1")])
+    first.usage = Mock(
+        prompt_tokens=120,
+        completion_tokens=15,
+        prompt_cache_hit_tokens=100,
+        prompt_cache_miss_tokens=20,
+    )
+    second = _response(content="找到了。")
+    second.usage = Mock(prompt_tokens=300, completion_tokens=40, spec=["prompt_tokens", "completion_tokens"])
+    client = Mock()
+    client.chat.completions.create.side_effect = [first, second]
+
+    result = run_agent("找设备", client=client, model="test-model")
+
+    assert [call["prompt_tokens"] for call in result.model_calls] == [120, 300]
+    assert [call["completion_tokens"] for call in result.model_calls] == [15, 40]
+    assert result.model_calls[0]["prompt_cache_hit_tokens"] == 100
+    assert result.model_calls[1]["prompt_cache_hit_tokens"] is None
+    assert all(isinstance(call["latency_ms"], int) for call in result.model_calls)
+    assert all(call["model"] == "test-model" for call in result.model_calls)
+
+
+def test_missing_usage_is_recorded_as_unknown():
+    response = _response(content="好的。")
+    response.usage = None
+    client = Mock()
+    client.chat.completions.create.return_value = response
+
+    result = run_agent("你好", client=client, model="test-model")
+
+    assert result.model_calls[0]["prompt_tokens"] is None
+    assert result.model_calls[0]["completion_tokens"] is None
+
+
+def test_system_prompt_requires_simplified_chinese_for_simplified_questions():
+    # Evaluation run 20261013T120451Z answered a Simplified Chinese question
+    # in Traditional Chinese.
+    assert "Simplified Chinese" in SYSTEM_PROMPT
+
+
+def test_last_round_tells_the_model_to_answer_without_tools():
+    client = Mock()
+    client.chat.completions.create.side_effect = [
+        _response(tool_calls=[_raw_tool_call("search_devices", '{"max_price": 300}', "c1")]),
+        _response(content="300 元以内没有符合条件的设备。"),
+    ]
+
+    run_agent("300元以内", client=client, model="test-model", max_rounds=2)
+
+    last_messages = client.chat.completions.create.call_args.kwargs["messages"]
+    assert last_messages[-1]["role"] == "user"
+    assert "no more tool calls" in last_messages[-1]["content"].lower()
+
+
+def test_leaked_tool_markup_is_never_returned_to_the_user():
+    leaked = '<｜｜DSML｜｜ calls>\n<｜｜DSML｜｜ invoke name="search_devices">'
+    client = Mock()
+    client.chat.completions.create.return_value = _response(content=leaked)
+
+    result = run_agent("300元以内", client=client, model="test-model")
+
+    assert result.status == "degraded"
+    assert result.answer == DEGRADED_ANSWER

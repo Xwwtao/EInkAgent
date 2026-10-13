@@ -6,7 +6,7 @@ Supernote,A5 X2 Manta,note,2024,10.7,0,300,,Chauvet (Android 11),0,1,0,0,0,32,37
 Supernote,A6 X2 Nomad,note,2023,7.8,0,300,,Chauvet (Android 11),0,1,0,0,0,32,266,7.8吋便携黑白笔记 无前光,https://supernote.com/products/supernote-nomad,2026-09-11
 iReader,Smart 5 Pro,note,2024,10.3,0,300,,SmartOS 2.2,1,1,1,1,0,128,,10.3吋黑白手写本 [待核验:supports_stylus;weight_g],https://m.ithome.com/html/784967.htm,2026-09-11
 iReader,Smart 5C,note,2024,10.3,1,300,150,,1,1,1,1,0,128,396,10.3吋彩色手写本 [待核验:is_open_system;operating_system],https://m.ithome.com/html/798991.htm,2026-09-11
-BOOX,Leaf 5,reader,2025,7,0,300,,,1,0,1,1,0,64,175,7吋黑白阅读本 [待核验:is_open_system;has_warm_light],https://m.ithome.com/html/844083.htm,2026-09-11
+BOOX,Leaf 5,reader,2025,7,0,300,,,1,0,1,1,0,64,175,7吋黑白阅读本 冷暖光见京东规格表,https://m.ithome.com/html/844083.htm,2026-09-11
 BOOX,Note X5,note,2025,10.3,0,300,,,1,1,1,1,0,64,,10.3吋黑白手写本 [待核验:is_open_system;weight_g],https://m.ithome.com/html/861049.htm,2026-09-11
 BOOX,T10C+,tablet,2026,10.3,1,300,150,Android 13,1,1,1,1,0,128,420,10.3吋彩墨生产力平板 [待核验:is_open_system;supports_stylus],https://m.ithome.com/html/932036.htm,2026-09-11
 BOOX,T13C,tablet,2025,13.3,1,300,,,1,1,1,1,0,128,,13.3吋彩墨旗舰办公本 [待核验:is_open_system;has_front_light;weight_g],https://m.ithome.com/html/844211.htm,2026-09-11
@@ -36,7 +36,7 @@ iReader,Tango 2S,reader,2026,5.84,0,300,,,,,,,,64,147,5.84吋手机造型阅读�
 BOOX,Note Air6 C,note,2026,10.3,1,,,Android 16,1,1,1,1,,64,440,10.3吋彩色手写本 分辨率2480×1860/1240×930 [待核验:mono_ppi;color_ppi],https://www.ithome.com/1/003/220.htm,2026-10-05
 BOOX,Note X6,note,2026,10.3,0,300,,Android 16,,1,,,,128,365,10.3吋黑白办公本 标配手写笔 [待核验:has_front_light],https://www.ithome.com/0/957/218.htm,2026-10-05
 BOOX,Palma 3,reader,2026,6.13,0,,,Android 16,1,1,,,,,,6.13吋手机造型阅读器 Carta 1200 [待核验:storage_gb;weight_g;has_front_light],https://www.ithome.com/1/003/314.htm,2026-10-05
-BOOX,Leaf5+,reader,,7,0,300,,,,1,1,1,,64,192,7吋黑白阅读本 实体翻页键 [待核验:release_year],https://www.ithome.com/0/954/169.htm,2026-10-05
+BOOX,Leaf5+,reader,,7,0,300,,Android,1,1,1,1,,64,192,7吋黑白阅读本 实体翻页键 安卓开放系统（作者确认）；前光、冷暖光、手写见京东规格表 [待核验:release_year],https://www.ithome.com/0/954/169.htm,2026-10-05
 Hanvon,N10 Pro 三代,note,2026,10.3,0,300,,Android 14,1,1,0,,,128,403,10.3吋减层屏手写本 无导光板,https://www.ithome.com/0/957/879.htm,2026-10-05
 Hanvon,N6 Pro,note,2026,6,0,,,,,1,,,,64,189,6吋黑白手写本 分辨率1448×1072,https://www.ithome.com/0/990/998.htm,2026-10-05
 Hanvon,Clear7C,reader,2026,7,1,300,150,Android 14,,,,,,64,175,7吋彩色阅读器 Kaleido 3 实体翻页键,https://www.ithome.com/0/942/771.htm,2026-10-05

@@ -1,5 +1,7 @@
 """Validated device requirements extracted from user language."""
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -16,7 +18,17 @@ class DeviceRequirements(BaseModel):
     supports_stylus: bool | None = None
     is_color: bool | None = None
     is_open_system: bool | None = None
-    category: str | None = Field(default=None, min_length=1)
+    # A free-form string let the model send values such as "阅读器", which
+    # silently matched nothing; unknown values now fail validation and are
+    # reported back to the model.
+    category: Literal["reader", "note", "tablet"] | None = Field(
+        default=None,
+        description=(
+            "reader = e-book reader, note = handwriting notebook, "
+            "tablet = general-purpose E Ink tablet. Leave empty when the user "
+            "does not clearly ask for one type."
+        ),
+    )
     brand: str | None = Field(
         default=None,
         min_length=1,
