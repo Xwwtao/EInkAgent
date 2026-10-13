@@ -2,7 +2,7 @@ title: Kaleido 彩色墨水屏：彩色滤光片方案
 verified_at: 2026-10-13
 source: Wikipedia E Ink | https://en.wikipedia.org/wiki/E_Ink
 source: E Ink 官网 Kaleido | https://www.eink.com/brand/detail/Kaleido
-source: IT之家 汉王 Clear7C 发布报道 | https://www.ithome.com/0/942/771.htm
+source: IT之家 采用 Kaleido 3 的阅读器报道 | https://www.ithome.com/0/942/771.htm
 
 ## 原理
 Kaleido 是在一块黑白灰阶墨水屏上方加一层彩色滤光片（Color Filter Array）。
@@ -15,4 +15,4 @@ Kaleido 最早在 2019 年 12 月以 "Print Color" 的名字公布，之后有 K
 
 ## 为什么彩色只有黑白的一半清晰
 彩色要靠滤光片上相邻的不同颜色格子组合出来，所以显示彩色内容时的有效分辨率低于黑白。
-例如采用 Kaleido 3 的汉王 Clear7C 标注为黑白 300 PPI、彩色 150 PPI。
+采用 Kaleido 3 的设备常见标注为黑白 300 PPI、彩色 150 PPI。

@@ -1,0 +1,687 @@
+{
+  "run": {
+    "started_at": "2026-10-13T14:30:55.196926+00:00",
+    "cases_file": "retrieval_cases.json",
+    "answerable": 27,
+    "unanswerable": 5,
+    "chunks": 48,
+    "embedding_model": "qwen3.7-text-embedding-flash",
+    "vector_threshold": 0.55,
+    "gate": 0.55
+  },
+  "methods": {
+    "keyword": {
+      "recall_at_3": 0.9074,
+      "precision_at_3": 0.5926,
+      "no_answer_empty_rate": 0,
+      "cases": {
+        "q01": [
+          "01-eink-how-it-works#2",
+          "01-eink-how-it-works#3",
+          "01-eink-how-it-works#1"
+        ],
+        "q02": [
+          "08-front-light#1",
+          "08-front-light#2",
+          "01-eink-how-it-works#2"
+        ],
+        "q03": [
+          "02-carta-generations#3",
+          "02-carta-generations#4",
+          "02-carta-generations#1"
+        ],
+        "q04": [
+          "03-ppi-sharpness#2",
+          "03-ppi-sharpness#1",
+          "02-carta-generations#2"
+        ],
+        "q05": [
+          "04-kaleido-color-filter#3",
+          "04-kaleido-color-filter#2",
+          "04-kaleido-color-filter#1"
+        ],
+        "q06": [
+          "04-kaleido-color-filter#2",
+          "04-kaleido-color-filter#3",
+          "01-eink-how-it-works#1"
+        ],
+        "q07": [
+          "04-kaleido-color-filter#2",
+          "04-kaleido-color-filter#3",
+          "05-gallery-acep#3"
+        ],
+        "q08": [
+          "05-gallery-acep#3",
+          "04-kaleido-color-filter#1",
+          "04-kaleido-color-filter#3"
+        ],
+        "q09": [
+          "12-active-pen#2",
+          "06-spectra#2",
+          "12-active-pen#1"
+        ],
+        "q10": [
+          "07-refresh-ghosting#2",
+          "07-refresh-ghosting#3",
+          "01-eink-how-it-works#2"
+        ],
+        "q11": [
+          "07-refresh-ghosting#2",
+          "13-pressure-latency#2",
+          "20-battery-life#1"
+        ],
+        "q12": [
+          "11-emr-passive-pen#2",
+          "19-eye-comfort-claims#1",
+          "20-battery-life#1"
+        ],
+        "q13": [
+          "08-front-light#2",
+          "16-epub-format#2",
+          "11-emr-passive-pen#3"
+        ],
+        "q14": [
+          "09-warm-light#1",
+          "10-no-front-light#1",
+          "04-kaleido-color-filter#2"
+        ],
+        "q15": [
+          "10-no-front-light#2",
+          "10-no-front-light#1",
+          "16-epub-format#2"
+        ],
+        "q16": [
+          "11-emr-passive-pen#2",
+          "11-emr-passive-pen#3",
+          "12-active-pen#2"
+        ],
+        "q17": [
+          "12-active-pen#1",
+          "12-active-pen#2",
+          "11-emr-passive-pen#2"
+        ],
+        "q18": [
+          "12-active-pen#2",
+          "13-pressure-latency#1",
+          "11-emr-passive-pen#1"
+        ],
+        "q19": [
+          "13-pressure-latency#1",
+          "13-pressure-latency#2"
+        ],
+        "q20": [
+          "09-warm-light#2",
+          "14-open-vs-closed-system#1",
+          "14-open-vs-closed-system#2"
+        ],
+        "q21": [
+          "14-open-vs-closed-system#2",
+          "15-reading-ecosystems#2",
+          "15-reading-ecosystems#1"
+        ],
+        "q22": [
+          "15-reading-ecosystems#1",
+          "01-eink-how-it-works#3",
+          "11-emr-passive-pen#2"
+        ],
+        "q23": [
+          "16-epub-format#1",
+          "16-epub-format#2",
+          "03-ppi-sharpness#1"
+        ],
+        "q24": [
+          "17-pdf-reading#1",
+          "17-pdf-reading#2",
+          "19-eye-comfort-claims#2"
+        ],
+        "q25": [
+          "18-ip-rating#2",
+          "20-battery-life#2",
+          "06-spectra#2"
+        ],
+        "q26": [
+          "08-front-light#2",
+          "19-eye-comfort-claims#2",
+          "02-carta-generations#5"
+        ],
+        "q27": [
+          "07-refresh-ghosting#2",
+          "05-gallery-acep#2",
+          "07-refresh-ghosting#3"
+        ],
+        "x01": [
+          "06-spectra#2",
+          "15-reading-ecosystems#1",
+          "11-emr-passive-pen#3"
+        ],
+        "x02": [
+          "01-eink-how-it-works#2",
+          "01-eink-how-it-works#3",
+          "07-refresh-ghosting#3"
+        ],
+        "x03": [
+          "15-reading-ecosystems#2",
+          "13-pressure-latency#2"
+        ],
+        "x04": [
+          "20-battery-life#2",
+          "06-spectra#2",
+          "05-gallery-acep#2"
+        ],
+        "x05": [
+          "10-no-front-light#2",
+          "19-eye-comfort-claims#1",
+          "08-front-light#1"
+        ]
+      }
+    },
+    "vector": {
+      "recall_at_3": 0.8889,
+      "precision_at_3": 0.5062,
+      "no_answer_empty_rate": 1,
+      "cases": {
+        "q01": [
+          "20-battery-life#1",
+          "08-front-light#1",
+          "01-eink-how-it-works#2"
+        ],
+        "q02": [
+          "20-battery-life#1",
+          "01-eink-how-it-works#2",
+          "20-battery-life#2"
+        ],
+        "q03": [
+          "02-carta-generations#3",
+          "02-carta-generations#4",
+          "02-carta-generations#1"
+        ],
+        "q04": [
+          "03-ppi-sharpness#1",
+          "03-ppi-sharpness#2"
+        ],
+        "q05": [
+          "04-kaleido-color-filter#3",
+          "07-refresh-ghosting#1",
+          "08-front-light#1"
+        ],
+        "q06": [
+          "04-kaleido-color-filter#3",
+          "04-kaleido-color-filter#2",
+          "05-gallery-acep#3"
+        ],
+        "q07": [
+          "05-gallery-acep#3",
+          "04-kaleido-color-filter#3"
+        ],
+        "q08": [
+          "05-gallery-acep#1",
+          "04-kaleido-color-filter#1",
+          "08-front-light#1"
+        ],
+        "q09": [
+          "06-spectra#2",
+          "01-eink-how-it-works#3"
+        ],
+        "q10": [
+          "07-refresh-ghosting#2"
+        ],
+        "q11": [
+          "07-refresh-ghosting#2"
+        ],
+        "q12": [
+          "08-front-light#1",
+          "19-eye-comfort-claims#1",
+          "20-battery-life#2"
+        ],
+        "q13": [
+          "08-front-light#2",
+          "10-no-front-light#2",
+          "19-eye-comfort-claims#1"
+        ],
+        "q14": [
+          "09-warm-light#1",
+          "09-warm-light#2"
+        ],
+        "q15": [
+          "10-no-front-light#2",
+          "08-front-light#1"
+        ],
+        "q16": [
+          "11-emr-passive-pen#2",
+          "11-emr-passive-pen#1",
+          "12-active-pen#1"
+        ],
+        "q17": [
+          "12-active-pen#1",
+          "12-active-pen#2",
+          "11-emr-passive-pen#2"
+        ],
+        "q18": [
+          "13-pressure-latency#1"
+        ],
+        "q19": [
+          "13-pressure-latency#2"
+        ],
+        "q20": [],
+        "q21": [
+          "15-reading-ecosystems#2",
+          "14-open-vs-closed-system#2"
+        ],
+        "q22": [
+          "15-reading-ecosystems#1"
+        ],
+        "q23": [
+          "16-epub-format#1",
+          "16-epub-format#2"
+        ],
+        "q24": [
+          "17-pdf-reading#2",
+          "17-pdf-reading#1"
+        ],
+        "q25": [
+          "18-ip-rating#2",
+          "18-ip-rating#1"
+        ],
+        "q26": [
+          "19-eye-comfort-claims#1",
+          "08-front-light#1",
+          "20-battery-life#1"
+        ],
+        "q27": [],
+        "x01": [],
+        "x02": [],
+        "x03": [],
+        "x04": [],
+        "x05": []
+      }
+    },
+    "hybrid": {
+      "recall_at_3": 0.9259,
+      "precision_at_3": 0.6296,
+      "no_answer_empty_rate": 0,
+      "cases": {
+        "q01": [
+          "01-eink-how-it-works#2",
+          "20-battery-life#1",
+          "01-eink-how-it-works#3"
+        ],
+        "q02": [
+          "08-front-light#1",
+          "20-battery-life#1",
+          "01-eink-how-it-works#2"
+        ],
+        "q03": [
+          "02-carta-generations#3",
+          "02-carta-generations#4",
+          "02-carta-generations#1"
+        ],
+        "q04": [
+          "03-ppi-sharpness#1",
+          "03-ppi-sharpness#2",
+          "02-carta-generations#2"
+        ],
+        "q05": [
+          "04-kaleido-color-filter#3",
+          "05-gallery-acep#1",
+          "05-gallery-acep#3"
+        ],
+        "q06": [
+          "04-kaleido-color-filter#2",
+          "04-kaleido-color-filter#3",
+          "05-gallery-acep#3"
+        ],
+        "q07": [
+          "05-gallery-acep#3",
+          "04-kaleido-color-filter#3",
+          "04-kaleido-color-filter#2"
+        ],
+        "q08": [
+          "04-kaleido-color-filter#1",
+          "05-gallery-acep#1",
+          "05-gallery-acep#3"
+        ],
+        "q09": [
+          "06-spectra#2",
+          "12-active-pen#2",
+          "01-eink-how-it-works#3"
+        ],
+        "q10": [
+          "07-refresh-ghosting#2",
+          "07-refresh-ghosting#3",
+          "01-eink-how-it-works#2"
+        ],
+        "q11": [
+          "07-refresh-ghosting#2",
+          "13-pressure-latency#2",
+          "20-battery-life#1"
+        ],
+        "q12": [
+          "19-eye-comfort-claims#1",
+          "08-front-light#1",
+          "20-battery-life#1"
+        ],
+        "q13": [
+          "08-front-light#2",
+          "10-no-front-light#2",
+          "16-epub-format#2"
+        ],
+        "q14": [
+          "09-warm-light#1",
+          "09-warm-light#2",
+          "10-no-front-light#1"
+        ],
+        "q15": [
+          "10-no-front-light#2",
+          "08-front-light#1",
+          "10-no-front-light#1"
+        ],
+        "q16": [
+          "11-emr-passive-pen#2",
+          "11-emr-passive-pen#1",
+          "11-emr-passive-pen#3"
+        ],
+        "q17": [
+          "12-active-pen#1",
+          "12-active-pen#2",
+          "11-emr-passive-pen#2"
+        ],
+        "q18": [
+          "13-pressure-latency#1",
+          "12-active-pen#2",
+          "11-emr-passive-pen#1"
+        ],
+        "q19": [
+          "13-pressure-latency#2",
+          "13-pressure-latency#1"
+        ],
+        "q20": [
+          "09-warm-light#2",
+          "14-open-vs-closed-system#1",
+          "14-open-vs-closed-system#2"
+        ],
+        "q21": [
+          "14-open-vs-closed-system#2",
+          "15-reading-ecosystems#2",
+          "15-reading-ecosystems#1"
+        ],
+        "q22": [
+          "15-reading-ecosystems#1",
+          "01-eink-how-it-works#3",
+          "11-emr-passive-pen#2"
+        ],
+        "q23": [
+          "16-epub-format#1",
+          "16-epub-format#2",
+          "03-ppi-sharpness#1"
+        ],
+        "q24": [
+          "17-pdf-reading#1",
+          "17-pdf-reading#2",
+          "19-eye-comfort-claims#2"
+        ],
+        "q25": [
+          "18-ip-rating#2",
+          "18-ip-rating#1",
+          "20-battery-life#2"
+        ],
+        "q26": [
+          "19-eye-comfort-claims#1",
+          "19-eye-comfort-claims#2",
+          "08-front-light#1"
+        ],
+        "q27": [
+          "07-refresh-ghosting#2",
+          "05-gallery-acep#2",
+          "07-refresh-ghosting#3"
+        ],
+        "x01": [
+          "06-spectra#2",
+          "15-reading-ecosystems#1",
+          "11-emr-passive-pen#3"
+        ],
+        "x02": [
+          "01-eink-how-it-works#2",
+          "01-eink-how-it-works#3",
+          "07-refresh-ghosting#3"
+        ],
+        "x03": [
+          "15-reading-ecosystems#2",
+          "13-pressure-latency#2"
+        ],
+        "x04": [
+          "20-battery-life#2",
+          "06-spectra#2",
+          "05-gallery-acep#2"
+        ],
+        "x05": [
+          "10-no-front-light#2",
+          "19-eye-comfort-claims#1",
+          "08-front-light#1"
+        ]
+      }
+    },
+    "hybrid_gated": {
+      "recall_at_3": 0.8889,
+      "precision_at_3": 0.6543,
+      "no_answer_empty_rate": 1,
+      "cases": {
+        "q01": [
+          "01-eink-how-it-works#2",
+          "20-battery-life#1",
+          "01-eink-how-it-works#3"
+        ],
+        "q02": [
+          "08-front-light#1",
+          "20-battery-life#1",
+          "01-eink-how-it-works#2"
+        ],
+        "q03": [
+          "02-carta-generations#3",
+          "02-carta-generations#4",
+          "02-carta-generations#1"
+        ],
+        "q04": [
+          "03-ppi-sharpness#1",
+          "03-ppi-sharpness#2",
+          "02-carta-generations#2"
+        ],
+        "q05": [
+          "04-kaleido-color-filter#3",
+          "05-gallery-acep#1",
+          "05-gallery-acep#3"
+        ],
+        "q06": [
+          "04-kaleido-color-filter#2",
+          "04-kaleido-color-filter#3",
+          "01-eink-how-it-works#1"
+        ],
+        "q07": [
+          "04-kaleido-color-filter#2",
+          "05-gallery-acep#3",
+          "04-kaleido-color-filter#3"
+        ],
+        "q08": [
+          "04-kaleido-color-filter#1",
+          "05-gallery-acep#1",
+          "05-gallery-acep#3"
+        ],
+        "q09": [
+          "06-spectra#2",
+          "01-eink-how-it-works#1",
+          "12-active-pen#2"
+        ],
+        "q10": [
+          "07-refresh-ghosting#2",
+          "07-refresh-ghosting#3",
+          "01-eink-how-it-works#2"
+        ],
+        "q11": [
+          "07-refresh-ghosting#2",
+          "08-front-light#2",
+          "07-refresh-ghosting#3"
+        ],
+        "q12": [
+          "19-eye-comfort-claims#1",
+          "08-front-light#1",
+          "20-battery-life#1"
+        ],
+        "q13": [
+          "08-front-light#2",
+          "08-front-light#1",
+          "20-battery-life#1"
+        ],
+        "q14": [
+          "09-warm-light#1",
+          "10-no-front-light#1",
+          "09-warm-light#2"
+        ],
+        "q15": [
+          "10-no-front-light#2",
+          "10-no-front-light#1",
+          "20-battery-life#2"
+        ],
+        "q16": [
+          "11-emr-passive-pen#2",
+          "11-emr-passive-pen#1",
+          "11-emr-passive-pen#3"
+        ],
+        "q17": [
+          "12-active-pen#1",
+          "12-active-pen#2",
+          "11-emr-passive-pen#2"
+        ],
+        "q18": [
+          "12-active-pen#2",
+          "13-pressure-latency#1",
+          "13-pressure-latency#2"
+        ],
+        "q19": [
+          "13-pressure-latency#1",
+          "13-pressure-latency#2",
+          "07-refresh-ghosting#1"
+        ],
+        "q20": [],
+        "q21": [
+          "14-open-vs-closed-system#2",
+          "15-reading-ecosystems#2",
+          "15-reading-ecosystems#1"
+        ],
+        "q22": [
+          "15-reading-ecosystems#1",
+          "15-reading-ecosystems#2",
+          "14-open-vs-closed-system#2"
+        ],
+        "q23": [
+          "16-epub-format#1",
+          "16-epub-format#2",
+          "06-spectra#1"
+        ],
+        "q24": [
+          "17-pdf-reading#1",
+          "17-pdf-reading#2",
+          "06-spectra#2"
+        ],
+        "q25": [
+          "18-ip-rating#2",
+          "18-ip-rating#1",
+          "20-battery-life#2"
+        ],
+        "q26": [
+          "19-eye-comfort-claims#1",
+          "19-eye-comfort-claims#2",
+          "08-front-light#1"
+        ],
+        "q27": [],
+        "x01": [],
+        "x02": [],
+        "x03": [],
+        "x04": [],
+        "x05": []
+      }
+    }
+  },
+  "vector_sweep": {
+    "0.0": {
+      "recall_at_3": 0.963,
+      "precision_at_3": 0.6296,
+      "no_answer_empty_rate": 0
+    },
+    "0.3": {
+      "recall_at_3": 0.963,
+      "precision_at_3": 0.6296,
+      "no_answer_empty_rate": 0
+    },
+    "0.35": {
+      "recall_at_3": 0.963,
+      "precision_at_3": 0.6296,
+      "no_answer_empty_rate": 0.2
+    },
+    "0.4": {
+      "recall_at_3": 0.963,
+      "precision_at_3": 0.6296,
+      "no_answer_empty_rate": 0.6
+    },
+    "0.45": {
+      "recall_at_3": 0.9259,
+      "precision_at_3": 0.6049,
+      "no_answer_empty_rate": 0.6
+    },
+    "0.5": {
+      "recall_at_3": 0.8889,
+      "precision_at_3": 0.5802,
+      "no_answer_empty_rate": 0.8
+    },
+    "0.55": {
+      "recall_at_3": 0.8889,
+      "precision_at_3": 0.5062,
+      "no_answer_empty_rate": 1
+    },
+    "0.6": {
+      "recall_at_3": 0.8704,
+      "precision_at_3": 0.4691,
+      "no_answer_empty_rate": 1
+    }
+  },
+  "gate_sweep": {
+    "0.0": {
+      "recall_at_3": 0.9259,
+      "precision_at_3": 0.679,
+      "no_answer_empty_rate": 0
+    },
+    "0.3": {
+      "recall_at_3": 0.9259,
+      "precision_at_3": 0.679,
+      "no_answer_empty_rate": 0
+    },
+    "0.35": {
+      "recall_at_3": 0.9259,
+      "precision_at_3": 0.679,
+      "no_answer_empty_rate": 0.2
+    },
+    "0.4": {
+      "recall_at_3": 0.9259,
+      "precision_at_3": 0.679,
+      "no_answer_empty_rate": 0.6
+    },
+    "0.45": {
+      "recall_at_3": 0.8889,
+      "precision_at_3": 0.6543,
+      "no_answer_empty_rate": 0.6
+    },
+    "0.5": {
+      "recall_at_3": 0.8889,
+      "precision_at_3": 0.6543,
+      "no_answer_empty_rate": 0.8
+    },
+    "0.55": {
+      "recall_at_3": 0.8889,
+      "precision_at_3": 0.6543,
+      "no_answer_empty_rate": 1
+    },
+    "0.6": {
+      "recall_at_3": 0.8889,
+      "precision_at_3": 0.6543,
+      "no_answer_empty_rate": 1
+    }
+  }
+}
