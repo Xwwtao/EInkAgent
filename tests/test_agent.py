@@ -709,3 +709,28 @@ def test_system_prompt_requires_simplified_chinese_for_simplified_questions():
     # Evaluation run 20261013T120451Z answered a Simplified Chinese question
     # in Traditional Chinese.
     assert "Simplified Chinese" in SYSTEM_PROMPT
+
+
+def test_last_round_tells_the_model_to_answer_without_tools():
+    client = Mock()
+    client.chat.completions.create.side_effect = [
+        _response(tool_calls=[_raw_tool_call("search_devices", '{"max_price": 300}', "c1")]),
+        _response(content="300 元以内没有符合条件的设备。"),
+    ]
+
+    run_agent("300元以内", client=client, model="test-model", max_rounds=2)
+
+    last_messages = client.chat.completions.create.call_args.kwargs["messages"]
+    assert last_messages[-1]["role"] == "user"
+    assert "no more tool calls" in last_messages[-1]["content"].lower()
+
+
+def test_leaked_tool_markup_is_never_returned_to_the_user():
+    leaked = '<｜｜DSML｜｜ calls>\n<｜｜DSML｜｜ invoke name="search_devices">'
+    client = Mock()
+    client.chat.completions.create.return_value = _response(content=leaked)
+
+    result = run_agent("300元以内", client=client, model="test-model")
+
+    assert result.status == "degraded"
+    assert result.answer == DEGRADED_ANSWER

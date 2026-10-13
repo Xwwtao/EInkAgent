@@ -21,6 +21,7 @@ from eink_agent.agent_tools import (
 from eink_agent.answer_guard import (
     find_internal_field_names,
     find_unexecuted_action_claims,
+    has_leaked_tool_markup,
 )
 
 # One failure gives the model a chance to correct itself; a second failure in
@@ -60,6 +61,11 @@ FIELD_NAME_REWRITE_INSTRUCTION = (
     "Your answer shows internal field names ({fields}). Rewrite it in plain "
     "language for the user, e.g. say 'closed system' instead of "
     "is_open_system=0, and keep every fact unchanged."
+)
+
+LAST_ROUND_INSTRUCTION = (
+    "There are no more tool calls available. Answer the user now using only "
+    "the tool results above; if nothing matched, say so plainly."
 )
 
 SYSTEM_PROMPT = (
@@ -299,6 +305,10 @@ def run_agent(
         # On the last round the model must answer from what it already has,
         # so collected tool results are not thrown away.
         is_last_round = round_index == max_rounds - 1
+        if is_last_round and round_index > 0:
+            # tool_choice="none" alone did not stop DeepSeek from printing a
+            # tool call as text, so the model is also told in words.
+            messages.append({"role": "user", "content": LAST_ROUND_INSTRUCTION})
         started = time.perf_counter()
         response = client.chat.completions.create(
             model=model,
@@ -318,7 +328,7 @@ def run_agent(
 
         if not tool_calls:
             answer = (message.content or "").strip()
-            if not answer:
+            if not answer or has_leaked_tool_markup(answer):
                 return AgentResult(DEGRADED_ANSWER, tool_trace, "degraded", model_calls)
 
             claims = find_unexecuted_action_claims(answer)
