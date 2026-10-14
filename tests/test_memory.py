@@ -89,3 +89,83 @@ def test_preferences_are_described_in_plain_chinese():
 
 def test_no_preferences_describe_as_empty():
     assert describe_preferences({}) == ""
+
+
+# --- Rolling summary ---
+
+from unittest.mock import Mock
+
+from eink_agent.memory import MAX_SUMMARY_CHARS, SUMMARY_BATCH_MESSAGES, update_summary
+
+
+def _summary_client(text="用户想要手写，预算 1500。"):
+    client = Mock()
+    client.chat.completions.create.return_value = Mock(
+        choices=[Mock(message=Mock(content=text))], usage=Mock(prompt_tokens=50, completion_tokens=10)
+    )
+    return client
+
+
+def _fill(store, count):
+    store.add_messages("s1", [
+        {"role": "user" if i % 2 == 0 else "assistant", "content": f"消息{i}"} for i in range(count)
+    ])
+
+
+def test_no_summary_until_enough_messages_leave_the_window(store):
+    _fill(store, 10 + SUMMARY_BATCH_MESSAGES - 1)
+    client = _summary_client()
+
+    outcome = update_summary(store, "s1", client=client, model="m", window=10)
+
+    assert outcome["updated"] is False
+    client.chat.completions.create.assert_not_called()
+
+
+def test_summary_covers_messages_that_left_the_window(store):
+    _fill(store, 10 + SUMMARY_BATCH_MESSAGES)
+    client = _summary_client()
+
+    outcome = update_summary(store, "s1", client=client, model="m", window=10)
+
+    assert outcome["updated"] is True
+    assert outcome["model_call"]["prompt_tokens"] == 50
+    assert store.summary("s1") == ("用户想要手写，预算 1500。", SUMMARY_BATCH_MESSAGES)
+    prompt = client.chat.completions.create.call_args.kwargs["messages"][-1]["content"]
+    assert "消息0" in prompt and f"消息{SUMMARY_BATCH_MESSAGES - 1}" in prompt
+    assert f"消息{SUMMARY_BATCH_MESSAGES}" not in prompt  # still inside the window
+
+
+def test_next_summary_rewrites_old_summary_with_only_new_messages(store):
+    store.save_summary("s1", "旧摘要：想要手写。", SUMMARY_BATCH_MESSAGES)
+    _fill(store, 10 + 2 * SUMMARY_BATCH_MESSAGES)
+    client = _summary_client("新摘要")
+
+    update_summary(store, "s1", client=client, model="m", window=10)
+
+    prompt = client.chat.completions.create.call_args.kwargs["messages"][-1]["content"]
+    assert "旧摘要：想要手写。" in prompt
+    assert "消息0" not in prompt and f"消息{SUMMARY_BATCH_MESSAGES}" in prompt
+    assert store.summary("s1") == ("新摘要", 2 * SUMMARY_BATCH_MESSAGES)
+
+
+def test_summary_length_is_capped(store):
+    _fill(store, 10 + SUMMARY_BATCH_MESSAGES)
+
+    update_summary(store, "s1", client=_summary_client("长" * 2000), model="m", window=10)
+
+    assert len(store.summary("s1")[0]) == MAX_SUMMARY_CHARS
+
+
+@pytest.mark.parametrize("failure", ["exception", "empty"])
+def test_failed_summary_keeps_the_old_one(store, failure):
+    store.save_summary("s1", "旧摘要", 0)
+    _fill(store, 10 + SUMMARY_BATCH_MESSAGES)
+    client = _summary_client("   ")
+    if failure == "exception":
+        client.chat.completions.create.side_effect = TimeoutError("slow")
+
+    outcome = update_summary(store, "s1", client=client, model="m", window=10)
+
+    assert outcome["updated"] is False
+    assert store.summary("s1") == ("旧摘要", 0)
