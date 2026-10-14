@@ -7,15 +7,16 @@ from pathlib import Path as FilePath
 import time
 from typing import Annotated, Any, Literal
 
-from fastapi import Depends, FastAPI, HTTPException, Path, Query
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Path, Query
 from fastapi.responses import FileResponse
 import openai
 from openai import OpenAI
-from pydantic import BaseModel, ConfigDict, Field, PositiveInt, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, PositiveInt, StringConstraints, model_validator
 
 from device_repository import compare_devices, get_device_detail, search_devices
-from eink_agent.agent import run_agent
+from eink_agent.agent import MAX_HISTORY_MESSAGES, run_agent
 from eink_agent.knowledge import KnowledgeBase, KnowledgeSearcher, embed_texts
+from eink_agent.memory import MEMORY_DB_PATH, SessionMemory, SQLiteMemoryStore, update_summary
 
 STATIC_DIR = FilePath(__file__).resolve().parent / "static"
 
@@ -32,6 +33,8 @@ MAX_MESSAGE_LENGTH = 1000
 MAX_HISTORY_CONTENT_LENGTH = 4000
 # The Agent keeps only the latest messages; this cap just bounds request size.
 MAX_HISTORY_ITEMS = 20
+# The page generates a UUID; anything else is rejected before it reaches SQL.
+SESSION_ID_PATTERN = r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
 
 
 class DeviceComparisonRequest(BaseModel):
@@ -73,6 +76,15 @@ class AgentRequest(BaseModel):
         default_factory=list,
         max_length=MAX_HISTORY_ITEMS,
     )
+    # With a session the server keeps the history, preferences and summary
+    # (decision 009); without one it stores nothing, as before.
+    session_id: str | None = Field(default=None, pattern=SESSION_ID_PATTERN)
+
+    @model_validator(mode="after")
+    def _one_source_of_history(self) -> "AgentRequest":
+        if self.session_id and self.history:
+            raise ValueError("send either session_id or history, not both")
+        return self
 
 
 class ToolCallView(BaseModel):
@@ -94,6 +106,23 @@ class AgentResponse(BaseModel):
     tool_calls: list[ToolCallView]
     latency_ms: int
     model: str
+    # Preferences in effect after this turn; None without a session or when
+    # memory could not be read.
+    preferences: dict[str, Any] | None = None
+
+
+class PreferenceEvent(BaseModel):
+    field: str
+    value: Any
+    created_at: str
+
+
+class SessionView(BaseModel):
+    """A stored conversation, so the page can restore it after a refresh."""
+
+    messages: list[HistoryMessage]
+    preferences: dict[str, Any]
+    preference_history: list[PreferenceEvent]
 
 
 @dataclass(frozen=True)
@@ -161,6 +190,11 @@ def get_agent_runtime() -> AgentRuntime:
     )
 
 
+def get_memory_store() -> SQLiteMemoryStore:
+    """Session memory store; tests replace this dependency."""
+    return SQLiteMemoryStore(os.environ.get("MEMORY_DB_PATH") or MEMORY_DB_PATH)
+
+
 app = FastAPI(title="EInkAgent", version="0.5.0")
 
 
@@ -180,17 +214,28 @@ def health() -> dict[str,str]:
 def ask_agent(
     request: AgentRequest,
     runtime: Annotated[AgentRuntime, Depends(get_agent_runtime)],
+    store: Annotated[SQLiteMemoryStore, Depends(get_memory_store)],
+    background_tasks: BackgroundTasks,
 ) -> AgentResponse:
-    """Answer one message, using the client-supplied history as context."""
+    """Answer one message, with history from the client or from the session."""
     started = time.perf_counter()
+    history = [message.model_dump() for message in request.history]
+    memory = None
+    if request.session_id:
+        memory = SessionMemory(store, request.session_id)
+        try:
+            history = store.messages(request.session_id)[-MAX_HISTORY_MESSAGES:]
+        except Exception:  # noqa: BLE001 - memory is optional (decision 009)
+            history = []
 
     try:
         result = run_agent(
             request.message,
             client=runtime.client,
             model=runtime.model,
-            history=[message.model_dump() for message in request.history],
+            history=history,
             knowledge=runtime.knowledge,
+            memory=memory,
         )
     except openai.APITimeoutError as error:
         raise HTTPException(
@@ -203,6 +248,11 @@ def ask_agent(
             status_code=502,
             detail="模型服务暂时不可用，请稍后重试。",
         ) from error
+
+    preferences = None
+    if memory is not None:
+        preferences = _save_turn(memory, request.message, result.answer)
+        background_tasks.add_task(_summarize_quietly, store, memory.session_id, runtime)
 
     return AgentResponse(
         answer=result.answer,
@@ -220,7 +270,49 @@ def ask_agent(
         ],
         latency_ms=round((time.perf_counter() - started) * 1000),
         model=runtime.model,
+        preferences=preferences,
     )
+
+
+def _save_turn(memory: SessionMemory, message: str, answer: str) -> dict[str, Any] | None:
+    """Store the turn and return current preferences; failures are dropped.
+
+    The user already has the answer, so a storage error must not turn it
+    into an HTTP error.
+    """
+    try:
+        memory.store.add_messages(
+            memory.session_id,
+            [{"role": "user", "content": message}, {"role": "assistant", "content": answer}],
+        )
+        return memory.preferences()
+    except Exception:  # noqa: BLE001 - memory is optional (decision 009)
+        return None
+
+
+def _summarize_quietly(store: SQLiteMemoryStore, session_id: str, runtime: AgentRuntime) -> None:
+    """Runs after the response is sent; update_summary keeps the old summary
+    on model errors, and a storage error is dropped here."""
+    try:
+        update_summary(store, session_id, client=runtime.client, model=runtime.model, window=MAX_HISTORY_MESSAGES)
+    except Exception:  # noqa: BLE001 - memory is optional (decision 009)
+        pass
+
+
+@app.get("/sessions/{session_id}")
+def get_session(
+    session_id: Annotated[str, Path(pattern=SESSION_ID_PATTERN)],
+    store: Annotated[SQLiteMemoryStore, Depends(get_memory_store)],
+) -> SessionView:
+    """Messages and preferences of one session, to restore the page."""
+    try:
+        return SessionView(
+            messages=store.messages(session_id),
+            preferences=store.preferences(session_id),
+            preference_history=store.preference_history(session_id),
+        )
+    except Exception as error:  # noqa: BLE001 - the details may include file paths
+        raise HTTPException(status_code=503, detail="会话记忆暂时无法读取。") from error
 
 
 @app.get("/devices")
