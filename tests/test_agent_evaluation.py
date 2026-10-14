@@ -239,7 +239,8 @@ def test_summarize_counts_by_category_and_failure_type():
 def test_case_file_is_well_formed():
     """Catch typos in evals/agent_cases.json before a paid run."""
     cases = json.loads(CASES_PATH.read_text(encoding="utf-8"))
-    tool_names = {"search_devices", "get_device_detail", "compare_devices"}
+    tool_names = {"search_devices", "get_device_detail", "compare_devices", "search_knowledge"}
+    doc_ids = {path.stem for path in (CASES_PATH.parents[1] / "data" / "knowledge").glob("*.md")}
 
     assert len(cases) >= 30
     assert len({case["id"] for case in cases}) == len(cases)
@@ -248,9 +249,21 @@ def test_case_file_is_well_formed():
         assert case["input"].strip(), case["id"]
         for option in case["expect"]["required_calls_any_of"]:
             for requirement in option:
-                assert set(requirement) <= {"name", "arguments", "result_count", "result_ids_include"}, case["id"]
+                assert set(requirement) <= {
+                    "name", "arguments", "result_count", "result_ids_include", "result_docs_include"
+                }, case["id"]
                 assert requirement.get("name", "search_devices") in tool_names, case["id"]
-                assert "result_count" in requirement or requirement.get("result_ids_include"), case["id"]
+                assert (
+                    "result_count" in requirement
+                    or requirement.get("result_ids_include")
+                    or requirement.get("result_docs_include")
+                ), case["id"]
+        for path in case.get("knowledge_extra_docs", []):
+            assert (CASES_PATH.parents[1] / path).exists(), case["id"]
+        extra_ids = {Path(path).stem for path in case.get("knowledge_extra_docs", [])}
+        for option in case["expect"]["required_calls_any_of"]:
+            for requirement in option:
+                assert set(requirement.get("result_docs_include", [])) <= doc_ids | extra_ids, case["id"]
         if case["expect"]["no_tool_calls"]:
             assert not case["expect"]["required_calls_any_of"], case["id"]
 
@@ -322,3 +335,62 @@ def test_case_row_counts_match_the_committed_data(tmp_path, monkeypatch):
                     mismatches.append((case["id"], arguments, requirement["result_count"], actual))
 
     assert mismatches == []
+
+
+def test_knowledge_requirement_checks_which_documents_were_found():
+    case = _case(required_calls_any_of=[[{"name": "search_knowledge", "result_docs_include": ["04-kaleido-color-filter"]}]])
+    found = _run(tool_calls=[dict(_call("search_knowledge", {"query": "q"}, 2), result_docs=["04-kaleido-color-filter", "03-ppi-sharpness"])])
+    other = _run(tool_calls=[dict(_call("search_knowledge", {"query": "q"}, 1), result_docs=["18-ip-rating"])])
+
+    assert grade_case(case, found)["result"] == "PASS"
+    assert _failure_types(grade_case(case, other)) == ["wrong_documents"]
+
+
+# --- forbidden_calls (memory cases, decision 009) ---
+
+def test_forbidden_call_with_a_value_fails_only_on_that_value():
+    case = _case(forbidden_calls=[{"name": "search_devices", "arguments": {"max_price": 2000}}])
+
+    old = grade_case(case, _run(tool_calls=[_call("search_devices", {"max_price": 2000}, 3)]))
+    new = grade_case(case, _run(tool_calls=[_call("search_devices", {"max_price": 1500}, 2)]))
+
+    assert old["result"] == "FAIL"
+    assert old["failures"][0]["type"] == "forbidden_call"
+    assert new["result"] == "PASS"
+
+
+def test_forbidden_argument_name_fails_with_any_value():
+    case = _case(forbidden_calls=[{"name": "search_devices", "argument_names": ["supports_stylus"]}])
+
+    for value in (True, False):
+        graded = grade_case(case, _run(tool_calls=[_call("search_devices", {"supports_stylus": value}, 1)]))
+        assert graded["failures"] == [
+            {"type": "forbidden_call", "detail": "search_devices with supports_stylus"}
+        ]
+    assert grade_case(case, _run(tool_calls=[_call("search_devices", {"max_price": 3000}, 9)]))["result"] == "PASS"
+
+
+def test_forbidden_call_counts_even_if_a_later_call_is_correct():
+    case = _case(forbidden_calls=[{"name": "search_devices", "argument_names": ["max_price"]}])
+
+    graded = grade_case(case, _run(tool_calls=[
+        _call("search_devices", {"keyword": "Kindle Scribe", "max_price": 1500}, 0),
+        _call("search_devices", {"keyword": "Kindle Scribe"}, 3),
+    ]))
+
+    assert graded["result"] == "FAIL"
+
+
+def test_forbidden_calls_ignore_other_tools_and_failed_calls():
+    case = _case(forbidden_calls=[{"name": "search_devices", "argument_names": ["max_price"]}])
+
+    graded = grade_case(case, _run(tool_calls=[
+        _call("remember_preferences", {"max_price": 1500}, 1),
+        _call("search_devices", {"max_price": 1500}, 0, status="error"),
+    ]))
+
+    assert graded["result"] == "PASS"
+
+
+def test_memory_is_a_category():
+    assert "memory" in CATEGORIES

@@ -192,3 +192,157 @@ def test_regrade_applies_new_checks_to_saved_answers(tmp_path):
     assert "0 / 1 → 1 / 1" in markdown
     assert "| u01 | FAIL → PASS |" in markdown
     assert json.loads(report_path.read_text(encoding="utf-8")) == report
+
+
+
+def test_runner_passes_knowledge_and_records_found_documents(tmp_path):
+    class FakeKnowledge:
+        def __init__(self):
+            self.extra = None
+
+        def search(self, query):
+            return [{"chunk_id": "04-kaleido-color-filter#3", "title": "t", "section": "s", "text": "x",
+                     "source_url": "https://e.com", "verified_at": "2026-10-13"}]
+
+        def with_extra_documents(self, paths):
+            self.extra = paths
+            return self
+
+    case = {
+        "id": "k01", "category": "knowledge", "input": "彩色为什么不清楚", "history": [],
+        "knowledge_extra_docs": ["evals/knowledge_injection/x.md"],
+        "expect": {"status": "ok", "required_calls_any_of": [[{"name": "search_knowledge",
+                   "result_docs_include": ["04-kaleido-color-filter"]}]], "max_tool_calls": 6,
+                   "no_tool_calls": False, "answer_includes_any": [], "answer_includes_all": [], "answer_excludes": []},
+    }
+    cases_path = tmp_path / "cases.json"
+    cases_path.write_text(json.dumps([case], ensure_ascii=False), encoding="utf-8")
+    client = Mock()
+    client.chat.completions.create.side_effect = [
+        _response(tool_calls=[_tool_call("search_knowledge", {"query": "彩色"}, "k1")]),
+        _response(content="因为滤光片。"),
+    ]
+    knowledge = FakeKnowledge()
+
+    json_path, _ = evaluate_agent.run_evaluation(
+        cases_path=cases_path, client=client, model="m", report_dir=tmp_path / "r", pricing=None, knowledge=knowledge,
+    )
+
+    report = json.loads(json_path.read_text(encoding="utf-8"))
+    assert report["results"][0]["result"] == "PASS"
+    assert report["results"][0]["tool_calls"][0]["result_docs"] == ["04-kaleido-color-filter"]
+    assert knowledge.extra == ["evals/knowledge_injection/x.md"]
+    assert report["run"]["knowledge"] is True
+
+
+def test_runner_records_answer_rewrites(tmp_path):
+    client = Mock()
+    client.chat.completions.create.side_effect = [
+        _response(tool_calls=[_tool_call("search_devices", {"keyword": "Reader"}, "c1")]),
+        _response(content="已为您下单 Reader 6。"),
+        _response(content="Reader 6 参考价 899 元，我不能下单。"),
+        _response(content="请问预算和用途是什么？"),
+    ]
+
+    json_path, markdown_path = _run(tmp_path, client)
+
+    report = json.loads(json_path.read_text(encoding="utf-8"))
+    assert report["results"][0]["rewrites"] == ["action_claim"]
+    assert report["results"][1]["rewrites"] == []
+    assert "答案重写：s01（action_claim）" in markdown_path.read_text(encoding="utf-8")
+
+
+# --- Memory cases: setup turns, memory vs window (decision 009) ---
+
+MEMORY_CASE = {
+    "id": "mem01",
+    "category": "memory",
+    "setup_turns": ["预算1500以内"],
+    "input": "推荐几款",
+    "history": [],
+    "expect": {
+        "status": "ok",
+        "required_calls_any_of": [[{"name": "search_devices", "arguments": {"max_price": 1500}}]],
+        "forbidden_calls": [],
+        "max_tool_calls": 6,
+        "no_tool_calls": False,
+        "answer_includes_any": [],
+        "answer_includes_all": [],
+        "answer_excludes": [],
+    },
+}
+
+
+def _memory_aware_model():
+    """Remembers budgets when the tool is offered, and searches with a budget
+    only when the prompt's memory block holds one (it ignores history)."""
+    def create(**kwargs):
+        messages = kwargs["messages"]
+        offered = [tool["function"]["name"] for tool in kwargs["tools"]]
+        last = messages[-1]
+        if isinstance(last, dict) and last["role"] == "user":
+            if last["content"] == "预算1500以内":
+                if "remember_preferences" in offered:
+                    return _response(tool_calls=[_tool_call("remember_preferences", {"max_price": 1500}, "m1")])
+                return _response(content="好的。")
+            arguments = {"max_price": 1500} if "预算不超过 1500 元" in messages[0]["content"] else {}
+            return _response(tool_calls=[_tool_call("search_devices", arguments, "s1")])
+        return _response(content="好的。")
+
+    client = Mock()
+    client.chat.completions.create.side_effect = create
+    return client
+
+
+def test_memory_case_compares_memory_with_window_only(tmp_path):
+    cases_path = tmp_path / "cases.json"
+    cases_path.write_text(json.dumps([MEMORY_CASE], ensure_ascii=False), encoding="utf-8")
+
+    json_path, markdown_path = evaluate_agent.run_evaluation(
+        cases_path=cases_path, client=_memory_aware_model(), model="m", report_dir=tmp_path / "r", pricing=None,
+    )
+
+    report = json.loads(json_path.read_text(encoding="utf-8"))
+    result = report["results"][0]
+    assert result["result"] == "PASS"
+    assert result["setup_turns"][0]["input"] == "预算1500以内"
+    assert result["setup_turns"][0]["tool_calls"][0]["name"] == "remember_preferences"
+    assert report["window_results"][0]["result"] == "FAIL"
+    assert report["window_results"][0]["setup_turns"][0]["tool_calls"] == []
+    assert report["summary"]["memory_comparison"] == {
+        "cases": 1, "memory_passed": 1, "window_passed": 0, "preference_writes": 1,
+    }
+    markdown = markdown_path.read_text(encoding="utf-8")
+    assert "## 记忆对比" in markdown and "| mem01 | PASS | FAIL | 是 |" in markdown
+    # The per-case table must stay in one piece.
+    assert "| --- | --- | --- | --- | --- | --- |\n| mem01 | memory | PASS |" in markdown
+
+
+def test_memory_cases_use_a_fresh_store_each(tmp_path):
+    second = {**MEMORY_CASE, "id": "mem02", "setup_turns": []}
+    cases_path = tmp_path / "cases.json"
+    cases_path.write_text(json.dumps([MEMORY_CASE, second], ensure_ascii=False), encoding="utf-8")
+
+    json_path, _ = evaluate_agent.run_evaluation(
+        cases_path=cases_path, client=_memory_aware_model(), model="m", report_dir=tmp_path / "r", pricing=None,
+    )
+
+    report = json.loads(json_path.read_text(encoding="utf-8"))
+    # mem02 never states a budget, so mem01's memory must not leak into it.
+    assert report["results"][1]["tool_calls"][0]["arguments"] == {}
+
+
+def test_report_without_memory_cases_has_no_comparison(tmp_path):
+    client = Mock()
+    client.chat.completions.create.side_effect = [
+        _response(tool_calls=[_tool_call("search_devices", {"keyword": "Reader"}, "c1")]),
+        _response(content="Reader 6 参考价 899 元。"),
+        _response(content="请问预算和用途是什么？"),
+    ]
+
+    json_path, markdown_path = _run(tmp_path, client)
+
+    report = json.loads(json_path.read_text(encoding="utf-8"))
+    assert report["summary"].get("memory_comparison") is None
+    assert report["window_results"] == []
+    assert "记忆对比" not in markdown_path.read_text(encoding="utf-8")

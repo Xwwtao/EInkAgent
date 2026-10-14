@@ -1,0 +1,223 @@
+[
+  {
+    "id": "q01",
+    "question": "墨水屏是怎么显示出文字的",
+    "relevant_docs": [
+      "01-eink-how-it-works"
+    ]
+  },
+  {
+    "id": "q02",
+    "question": "墨水屏为什么特别省电",
+    "relevant_docs": [
+      "20-battery-life",
+      "01-eink-how-it-works"
+    ]
+  },
+  {
+    "id": "q03",
+    "question": "Carta 1300 比 Carta 1200 强在哪",
+    "relevant_docs": [
+      "02-carta-generations"
+    ]
+  },
+  {
+    "id": "q04",
+    "question": "300 PPI 和 212 PPI 看起来差别大吗",
+    "relevant_docs": [
+      "03-ppi-sharpness",
+      "02-carta-generations"
+    ]
+  },
+  {
+    "id": "q05",
+    "question": "彩色墨水屏显示彩色时为什么没那么清楚",
+    "relevant_docs": [
+      "04-kaleido-color-filter"
+    ]
+  },
+  {
+    "id": "q06",
+    "question": "Kaleido 3 是靠什么显示颜色的",
+    "relevant_docs": [
+      "04-kaleido-color-filter"
+    ]
+  },
+  {
+    "id": "q07",
+    "question": "Gallery 3 和 Kaleido 3 有什么不同",
+    "relevant_docs": [
+      "05-gallery-acep",
+      "04-kaleido-color-filter"
+    ]
+  },
+  {
+    "id": "q08",
+    "question": "有没有不加滤光片的彩色电子纸",
+    "relevant_docs": [
+      "05-gallery-acep"
+    ]
+  },
+  {
+    "id": "q09",
+    "question": "超市里的电子价签用的是哪种屏",
+    "relevant_docs": [
+      "06-spectra"
+    ]
+  },
+  {
+    "id": "q10",
+    "question": "翻页的时候屏幕闪一下黑是怎么回事",
+    "relevant_docs": [
+      "07-refresh-ghosting"
+    ]
+  },
+  {
+    "id": "q11",
+    "question": "屏幕上留着上一页的影子怎么办",
+    "relevant_docs": [
+      "07-refresh-ghosting"
+    ]
+  },
+  {
+    "id": "q12",
+    "question": "晚上关了灯还能用墨水屏看书吗",
+    "relevant_docs": [
+      "08-front-light",
+      "10-no-front-light"
+    ]
+  },
+  {
+    "id": "q13",
+    "question": "阅读器的灯和手机屏幕的光有什么不一样",
+    "relevant_docs": [
+      "08-front-light"
+    ]
+  },
+  {
+    "id": "q14",
+    "question": "灯光可以调成偏黄的颜色吗",
+    "relevant_docs": [
+      "09-warm-light"
+    ]
+  },
+  {
+    "id": "q15",
+    "question": "为什么有的手写本没有阅读灯",
+    "relevant_docs": [
+      "10-no-front-light"
+    ]
+  },
+  {
+    "id": "q16",
+    "question": "手写笔没电了还能写字吗",
+    "relevant_docs": [
+      "11-emr-passive-pen",
+      "12-active-pen"
+    ]
+  },
+  {
+    "id": "q17",
+    "question": "主动笔和电磁笔选哪个",
+    "relevant_docs": [
+      "12-active-pen",
+      "11-emr-passive-pen"
+    ]
+  },
+  {
+    "id": "q18",
+    "question": "8192 级压感有什么用",
+    "relevant_docs": [
+      "13-pressure-latency"
+    ]
+  },
+  {
+    "id": "q19",
+    "question": "写字跟手吗，延迟多少算好",
+    "relevant_docs": [
+      "13-pressure-latency"
+    ]
+  },
+  {
+    "id": "q20",
+    "question": "能不能自己装微信读书",
+    "relevant_docs": [
+      "14-open-vs-closed-system"
+    ]
+  },
+  {
+    "id": "q21",
+    "question": "我在好几个平台买过电子书，该选什么系统",
+    "relevant_docs": [
+      "14-open-vs-closed-system",
+      "15-reading-ecosystems"
+    ]
+  },
+  {
+    "id": "q22",
+    "question": "Kindle 是不是只能在亚马逊买书",
+    "relevant_docs": [
+      "15-reading-ecosystems"
+    ]
+  },
+  {
+    "id": "q23",
+    "question": "epub 是什么格式",
+    "relevant_docs": [
+      "16-epub-format"
+    ]
+  },
+  {
+    "id": "q24",
+    "question": "看扫描版的论文用多大的屏幕合适",
+    "relevant_docs": [
+      "17-pdf-reading"
+    ]
+  },
+  {
+    "id": "q25",
+    "question": "IPX7 的阅读器能带进浴室吗",
+    "relevant_docs": [
+      "18-ip-rating"
+    ]
+  },
+  {
+    "id": "q26",
+    "question": "墨水屏真的对眼睛好吗",
+    "relevant_docs": [
+      "19-eye-comfort-claims"
+    ]
+  },
+  {
+    "id": "q27",
+    "question": "充一次电大概能用多久",
+    "relevant_docs": [
+      "20-battery-life"
+    ]
+  },
+  {
+    "id": "x01",
+    "question": "坏了保修多久，去哪里修",
+    "relevant_docs": []
+  },
+  {
+    "id": "x02",
+    "question": "怎么连蓝牙耳机听书",
+    "relevant_docs": []
+  },
+  {
+    "id": "x03",
+    "question": "哪个品牌的客服态度最好",
+    "relevant_docs": []
+  },
+  {
+    "id": "x04",
+    "question": "旧的阅读器怎么回收",
+    "relevant_docs": []
+  },
+  {
+    "id": "x05",
+    "question": "学生买有没有教育优惠",
+    "relevant_docs": []
+  }
+]
