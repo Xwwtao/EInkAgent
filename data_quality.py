@@ -231,7 +231,7 @@ def build_report(today: date | None = None) -> str:
         devices_without_offers = _devices_without_offers(connection)
         lines.append(f"- 没有任何报价的真实设备：{devices_without_offers} 台")
 
-        lines.extend(["", "## 达标检查（AGENTS.md P0）", ""])
+        lines.extend(["", "## 达标检查", ""])
         lines.extend(
             [
                 f"- [{'x' if real >= 20 else ' '}] 真实设备 ≥ 20 台（当前 {real}）",

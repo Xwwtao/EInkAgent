@@ -41,8 +41,8 @@ data/*.csv ──▶ data_import.py ──▶ SQLite (devices, offers)
 | `data_import.py` / `data_quality.py` | Validated, idempotent CSV import and the data report |
 
 Design decisions, each with the rejected alternative, are in
-`docs/decisions/`. A guided code walkthrough is in `docs/learning/`, and a
-write-up of the whole project in `docs/retrospective.md` (Chinese).
+`docs/decisions/`, and a write-up of the whole project in
+`docs/retrospective.md` (Chinese).
 
 ## Quick start
 
@@ -90,8 +90,7 @@ only and does not load `.env` files.
 | 我想买个阅读器 | Asks about budget, size and use before searching |
 
 Each answer can expand a timeline of the tool calls it made, with arguments,
-result counts and failures. A two-minute demo script is in
-`docs/demo-script.md`.
+result counts and failures.
 
 ## Capabilities and limitations
 

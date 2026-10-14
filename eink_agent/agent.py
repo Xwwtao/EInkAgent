@@ -124,7 +124,7 @@ class AgentResult:
     """Final answer, every attempted tool call, and how the run ended.
 
     ``model_calls`` records latency and token usage for every model request,
-    for evaluation reports (AGENTS.md section 7). ``rewrites`` names why the
+    for evaluation reports. ``rewrites`` names why the
     answer guard asked for a rewrite ("action_claim", "field_names"), so a
     report shows which answers passed only after one.
     """
