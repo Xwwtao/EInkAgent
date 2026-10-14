@@ -8,8 +8,11 @@ from eink_agent.agent_tools import (
     GET_DEVICE_DETAIL_TOOL,
     SEARCH_DEVICES_TOOL,
     SEARCH_KNOWLEDGE_TOOL,
+    RememberPreferencesArguments,
+    UnknownToolError,
     execute_tool,
 )
+from eink_agent.requirements import DeviceRequirements
 
 
 def test_search_devices_tool_has_function_schema():
@@ -124,3 +127,58 @@ def test_knowledge_tool_asks_for_chinese_queries():
     # Chinese water-resistance document because its score fell below the gate.
     description = SEARCH_KNOWLEDGE_TOOL["function"]["description"]
     assert "Chinese" in description
+
+
+class FakeMemory:
+    def __init__(self):
+        self.saved = []
+        self.current = {}
+
+    def remember(self, updates):
+        self.saved.append(updates)
+        self.current = {**self.current, **updates}
+        self.current = {k: v for k, v in self.current.items() if v is not None}
+        return self.current
+
+
+def test_remember_preferences_saves_only_the_fields_given():
+    memory = FakeMemory()
+
+    result = execute_tool("remember_preferences", {"max_price": 1500, "supports_stylus": True}, memory=memory)
+
+    assert memory.saved == [{"max_price": 1500, "supports_stylus": True}]
+    assert result == {"saved": {"max_price": 1500, "supports_stylus": True},
+                      "current": {"max_price": 1500, "supports_stylus": True}}
+
+
+def test_remember_preferences_passes_explicit_null_to_withdraw():
+    memory = FakeMemory()
+    memory.current = {"supports_stylus": True}
+
+    result = execute_tool("remember_preferences", {"supports_stylus": None}, memory=memory)
+
+    assert memory.saved == [{"supports_stylus": None}]
+    assert result["current"] == {}
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [{}, {"max_price": -1}, {"category": "阅读器"}, {"keyword": "Kindle"}, {"brand": ""}],
+)
+def test_remember_preferences_rejects_invalid_arguments_and_saves_nothing(arguments):
+    memory = FakeMemory()
+
+    with pytest.raises(ValidationError):
+        execute_tool("remember_preferences", arguments, memory=memory)
+
+    assert memory.saved == []
+
+
+def test_remember_preferences_does_not_exist_without_memory():
+    with pytest.raises(UnknownToolError):
+        execute_tool("remember_preferences", {"max_price": 1500})
+
+
+def test_preference_fields_are_search_fields():
+    # Remembered values must be usable as search_devices arguments.
+    assert set(RememberPreferencesArguments.model_fields) <= set(DeviceRequirements.model_fields)
