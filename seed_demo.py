@@ -3,7 +3,7 @@ from datetime import date
 from database import get_connection, initialize_database
 
 
-# 名称和参数全部是虚构演示数据，只用于学习 SQL。
+# 名称和参数全部是虚构演示数据，只用于测试与演示。
 DEMO_DEVICES = [
     (
         "DemoInk", "Reader 6", "reader", 2026, 6.0, 0, 300, None,
