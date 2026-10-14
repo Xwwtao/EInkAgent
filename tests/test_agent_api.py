@@ -308,3 +308,16 @@ def test_session_summary_runs_after_the_answer(fake_model, memory_store):
     CLIENT.post("/agent", json={"message": "继续", "session_id": SESSION})
 
     assert memory_store.summary(SESSION) == ("用户在比较阅读器。", SUMMARY_BATCH_MESSAGES)
+
+
+def test_blocked_answer_is_not_stored_as_context(fake_model, memory_store):
+    # Same rule the page used before sessions: only completed turns become context.
+    fake_model.chat.completions.create.side_effect = [
+        _response(content="已为您下单。"),
+        _response(content="订单已提交。"),
+    ]
+
+    body = CLIENT.post("/agent", json={"message": "帮我下单", "session_id": SESSION}).json()
+
+    assert body["status"] == "blocked"
+    assert memory_store.messages(SESSION) == []

@@ -251,7 +251,7 @@ def ask_agent(
 
     preferences = None
     if memory is not None:
-        preferences = _save_turn(memory, request.message, result.answer)
+        preferences = _save_turn(memory, request.message, result.answer, store_turn=result.status == "ok")
         background_tasks.add_task(_summarize_quietly, store, memory.session_id, runtime)
 
     return AgentResponse(
@@ -274,17 +274,19 @@ def ask_agent(
     )
 
 
-def _save_turn(memory: SessionMemory, message: str, answer: str) -> dict[str, Any] | None:
+def _save_turn(memory: SessionMemory, message: str, answer: str, *, store_turn: bool) -> dict[str, Any] | None:
     """Store the turn and return current preferences; failures are dropped.
 
-    The user already has the answer, so a storage error must not turn it
-    into an HTTP error.
+    Only completed turns are stored as context, as the page did before
+    sessions. The user already has the answer, so a storage error must not
+    turn it into an HTTP error.
     """
     try:
-        memory.store.add_messages(
-            memory.session_id,
-            [{"role": "user", "content": message}, {"role": "assistant", "content": answer}],
-        )
+        if store_turn:
+            memory.store.add_messages(
+                memory.session_id,
+                [{"role": "user", "content": message}, {"role": "assistant", "content": answer}],
+            )
         return memory.preferences()
     except Exception:  # noqa: BLE001 - memory is optional (decision 009)
         return None
