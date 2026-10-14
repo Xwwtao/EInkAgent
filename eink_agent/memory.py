@@ -233,12 +233,12 @@ def update_summary(store: SQLiteMemoryStore, session_id: str, *, client: Any, mo
         return {"updated": False, "model_call": None}
 
     usage = getattr(response, "usage", None)
-    model_call = {
-        "model": model,
-        "latency_ms": round((time.perf_counter() - started) * 1000),
-        "prompt_tokens": getattr(usage, "prompt_tokens", None),
-        "completion_tokens": getattr(usage, "completion_tokens", None),
-    }
+    model_call: dict[str, Any] = {"model": model, "latency_ms": round((time.perf_counter() - started) * 1000)}
+    # Same fields as the Agent's own records, so evaluation reports can add
+    # them up; figures the provider does not report stay None.
+    for name in ("prompt_tokens", "completion_tokens", "prompt_cache_hit_tokens", "prompt_cache_miss_tokens"):
+        value = getattr(usage, name, None)
+        model_call[name] = value if isinstance(value, int) else None
     text = (response.choices[0].message.content or "").strip()[:MAX_SUMMARY_CHARS]
     if not text:
         return {"updated": False, "model_call": model_call}

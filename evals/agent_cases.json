@@ -1076,5 +1076,220 @@
     "knowledge_extra_docs": [
       "evals/knowledge_injection/99-injected-color-tips.md"
     ]
+  },
+  {
+    "id": "mem01_set_then_use",
+    "category": "memory",
+    "setup_turns": [
+      "预算2000以内，要能手写"
+    ],
+    "input": "推荐几款",
+    "history": [],
+    "expect": {
+      "status": "ok",
+      "required_calls_any_of": [
+        [
+          {
+            "name": "search_devices",
+            "arguments": {
+              "max_price": 2000,
+              "supports_stylus": true
+            },
+            "result_count": 2
+          }
+        ]
+      ],
+      "forbidden_calls": [],
+      "max_tool_calls": 6,
+      "no_tool_calls": false,
+      "answer_includes_any": [],
+      "answer_includes_all": [],
+      "answer_excludes": []
+    }
+  },
+  {
+    "id": "mem02_correct_budget",
+    "category": "memory",
+    "setup_turns": [
+      "预算2000以内，要能手写",
+      "预算改成1500吧"
+    ],
+    "input": "推荐几款",
+    "history": [],
+    "expect": {
+      "status": "ok",
+      "required_calls_any_of": [
+        [
+          {
+            "name": "search_devices",
+            "arguments": {
+              "max_price": 1500,
+              "supports_stylus": true
+            },
+            "result_count": 0
+          }
+        ]
+      ],
+      "forbidden_calls": [
+        {
+          "name": "search_devices",
+          "arguments": {
+            "max_price": 2000
+          }
+        }
+      ],
+      "max_tool_calls": 6,
+      "no_tool_calls": false,
+      "answer_includes_any": [],
+      "answer_includes_all": [],
+      "answer_excludes": []
+    }
+  },
+  {
+    "id": "mem03_drop_stylus",
+    "category": "memory",
+    "setup_turns": [
+      "我要能手写的，预算3000以内",
+      "手写不需要了"
+    ],
+    "input": "推荐几款",
+    "history": [],
+    "expect": {
+      "status": "ok",
+      "required_calls_any_of": [
+        [
+          {
+            "name": "search_devices",
+            "arguments": {
+              "max_price": 3000
+            },
+            "result_count": 20
+          }
+        ]
+      ],
+      "forbidden_calls": [
+        {
+          "name": "search_devices",
+          "argument_names": [
+            "supports_stylus"
+          ]
+        }
+      ],
+      "max_tool_calls": 6,
+      "no_tool_calls": false,
+      "answer_includes_any": [],
+      "answer_includes_all": [],
+      "answer_excludes": []
+    }
+  },
+  {
+    "id": "mem04_beyond_window",
+    "category": "memory",
+    "setup_turns": [
+      "我只看黑白屏的，预算1500以内",
+      "暖光是什么？",
+      "电磁笔需要充电吗？",
+      "IPX8 是什么意思？",
+      "开放系统和封闭系统有什么区别？",
+      "EPUB 和 PDF 有什么区别？"
+    ],
+    "input": "推荐几款阅读器",
+    "history": [],
+    "expect": {
+      "status": "ok",
+      "required_calls_any_of": [
+        [
+          {
+            "name": "search_devices",
+            "arguments": {
+              "is_color": false,
+              "max_price": 1500
+            },
+            "result_count": 5
+          }
+        ]
+      ],
+      "forbidden_calls": [],
+      "max_tool_calls": 6,
+      "no_tool_calls": false,
+      "answer_includes_any": [],
+      "answer_includes_all": [],
+      "answer_excludes": []
+    }
+  },
+  {
+    "id": "mem05_name_lookup_ignores_budget",
+    "category": "memory",
+    "setup_turns": [
+      "预算1500以内"
+    ],
+    "input": "Kindle Scribe 多少钱",
+    "history": [],
+    "expect": {
+      "status": "ok",
+      "required_calls_any_of": [
+        [
+          {
+            "result_ids_include": [
+              27,
+              28,
+              29
+            ]
+          }
+        ]
+      ],
+      "forbidden_calls": [
+        {
+          "name": "search_devices",
+          "argument_names": [
+            "max_price"
+          ]
+        }
+      ],
+      "max_tool_calls": 6,
+      "no_tool_calls": false,
+      "answer_includes_any": [],
+      "answer_includes_all": [],
+      "answer_excludes": []
+    }
+  },
+  {
+    "id": "mem06_one_off_override",
+    "category": "memory",
+    "setup_turns": [
+      "预算1500以内，要能手写"
+    ],
+    "input": "这次看看3000以内的",
+    "history": [],
+    "expect": {
+      "status": "ok",
+      "required_calls_any_of": [
+        [
+          {
+            "name": "search_devices",
+            "arguments": {
+              "max_price": 3000
+            },
+            "result_count": 20
+          }
+        ],
+        [
+          {
+            "name": "search_devices",
+            "arguments": {
+              "max_price": 3000,
+              "supports_stylus": true
+            },
+            "result_count": 9
+          }
+        ]
+      ],
+      "forbidden_calls": [],
+      "max_tool_calls": 6,
+      "no_tool_calls": false,
+      "answer_includes_any": [],
+      "answer_includes_all": [],
+      "answer_excludes": []
+    }
   }
 ]

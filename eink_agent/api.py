@@ -14,7 +14,7 @@ from openai import OpenAI
 from pydantic import BaseModel, ConfigDict, Field, PositiveInt, StringConstraints, model_validator
 
 from device_repository import compare_devices, get_device_detail, search_devices
-from eink_agent.agent import MAX_HISTORY_MESSAGES, run_agent
+from eink_agent.agent import MAX_HISTORY_MESSAGES, AgentResult, run_agent
 from eink_agent.knowledge import KnowledgeBase, KnowledgeSearcher, embed_texts
 from eink_agent.memory import MEMORY_DB_PATH, SessionMemory, SQLiteMemoryStore, update_summary
 
@@ -219,24 +219,22 @@ def ask_agent(
 ) -> AgentResponse:
     """Answer one message, with history from the client or from the session."""
     started = time.perf_counter()
-    history = [message.model_dump() for message in request.history]
-    memory = None
-    if request.session_id:
-        memory = SessionMemory(store, request.session_id)
-        try:
-            history = store.messages(request.session_id)[-MAX_HISTORY_MESSAGES:]
-        except Exception:  # noqa: BLE001 - memory is optional (decision 009)
-            history = []
+    preferences = None
 
     try:
-        result = run_agent(
-            request.message,
-            client=runtime.client,
-            model=runtime.model,
-            history=history,
-            knowledge=runtime.knowledge,
-            memory=memory,
-        )
+        if request.session_id:
+            result, preferences = answer_in_session(
+                request.message, runtime=runtime, store=store, session_id=request.session_id
+            )
+            background_tasks.add_task(summarize_quietly, store, request.session_id, runtime)
+        else:
+            result = run_agent(
+                request.message,
+                client=runtime.client,
+                model=runtime.model,
+                history=[message.model_dump() for message in request.history],
+                knowledge=runtime.knowledge,
+            )
     except openai.APITimeoutError as error:
         raise HTTPException(
             status_code=504,
@@ -248,11 +246,6 @@ def ask_agent(
             status_code=502,
             detail="模型服务暂时不可用，请稍后重试。",
         ) from error
-
-    preferences = None
-    if memory is not None:
-        preferences = _save_turn(memory, request.message, result.answer, store_turn=result.status == "ok")
-        background_tasks.add_task(_summarize_quietly, store, memory.session_id, runtime)
 
     return AgentResponse(
         answer=result.answer,
@@ -274,6 +267,32 @@ def ask_agent(
     )
 
 
+def answer_in_session(
+    message: str, *, runtime: AgentRuntime, store: SQLiteMemoryStore, session_id: str
+) -> tuple[AgentResult, dict[str, Any] | None]:
+    """One turn of a stored conversation: history from the store, memory
+    for the Agent, and the completed turn saved afterwards.
+
+    The evaluation runs memory cases through this same function. Model
+    errors propagate; memory errors never do (decision 009).
+    """
+    memory = SessionMemory(store, session_id)
+    try:
+        history = store.messages(session_id)[-MAX_HISTORY_MESSAGES:]
+    except Exception:  # noqa: BLE001 - memory is optional (decision 009)
+        history = []
+
+    result = run_agent(
+        message,
+        client=runtime.client,
+        model=runtime.model,
+        history=history,
+        knowledge=runtime.knowledge,
+        memory=memory,
+    )
+    return result, _save_turn(memory, message, result.answer, store_turn=result.status == "ok")
+
+
 def _save_turn(memory: SessionMemory, message: str, answer: str, *, store_turn: bool) -> dict[str, Any] | None:
     """Store the turn and return current preferences; failures are dropped.
 
@@ -292,7 +311,7 @@ def _save_turn(memory: SessionMemory, message: str, answer: str, *, store_turn: 
         return None
 
 
-def _summarize_quietly(store: SQLiteMemoryStore, session_id: str, runtime: AgentRuntime) -> None:
+def summarize_quietly(store: SQLiteMemoryStore, session_id: str, runtime: AgentRuntime) -> None:
     """Runs after the response is sent; update_summary keeps the old summary
     on model errors, and a storage error is dropped here."""
     try:

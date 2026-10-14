@@ -21,6 +21,7 @@ CATEGORIES = (
     "multi_turn",
     "data_honesty",
     "knowledge",
+    "memory",
 )
 
 TOKENS_PER_PRICE_UNIT = 1_000_000
@@ -110,6 +111,30 @@ def _check_option(option: list[dict[str, Any]], calls: list[dict[str, Any]]) -> 
     return failures
 
 
+def _forbidden_call_failures(forbidden: list[dict[str, Any]], calls: list[dict[str, Any]]) -> list[dict[str, str]]:
+    """A successful call matching a forbidden entry fails the case, even if a
+    later call is correct: the wrong search already ran (decision 009).
+
+    An entry matches by argument values (``arguments``) or by the presence
+    of arguments whatever their value (``argument_names``).
+    """
+    failures = []
+    for entry in forbidden:
+        for call in calls:
+            if call["status"] != "ok" or call["name"] != entry["name"] or call["arguments"] is None:
+                continue
+            if "arguments" in entry and _arguments_match(entry["arguments"], call["arguments"]):
+                failures.append({"type": "forbidden_call", "detail": _describe(entry)})
+                break
+            present = [name for name in entry.get("argument_names", []) if name in call["arguments"]]
+            if present:
+                failures.append(
+                    {"type": "forbidden_call", "detail": f"{entry['name']} with {', '.join(present)}"}
+                )
+                break
+    return failures
+
+
 def grade_case(case: dict[str, Any], run: dict[str, Any]) -> dict[str, Any]:
     """Grade one run. ``run`` has answer, status and tool_calls, or exception."""
     if "exception" in run:
@@ -144,6 +169,8 @@ def grade_case(case: dict[str, Any], run: dict[str, Any]) -> dict[str, Any]:
         if all(option_failures):
             # Report the closest alternative: the one with the fewest failures.
             failures.extend(min(option_failures, key=len))
+
+    failures.extend(_forbidden_call_failures(expect.get("forbidden_calls", []), calls))
 
     if expect["answer_includes_any"] and not any(
         phrase in answer for phrase in expect["answer_includes_any"]
