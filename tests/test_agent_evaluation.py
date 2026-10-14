@@ -344,3 +344,53 @@ def test_knowledge_requirement_checks_which_documents_were_found():
 
     assert grade_case(case, found)["result"] == "PASS"
     assert _failure_types(grade_case(case, other)) == ["wrong_documents"]
+
+
+# --- forbidden_calls (memory cases, decision 009) ---
+
+def test_forbidden_call_with_a_value_fails_only_on_that_value():
+    case = _case(forbidden_calls=[{"name": "search_devices", "arguments": {"max_price": 2000}}])
+
+    old = grade_case(case, _run(tool_calls=[_call("search_devices", {"max_price": 2000}, 3)]))
+    new = grade_case(case, _run(tool_calls=[_call("search_devices", {"max_price": 1500}, 2)]))
+
+    assert old["result"] == "FAIL"
+    assert old["failures"][0]["type"] == "forbidden_call"
+    assert new["result"] == "PASS"
+
+
+def test_forbidden_argument_name_fails_with_any_value():
+    case = _case(forbidden_calls=[{"name": "search_devices", "argument_names": ["supports_stylus"]}])
+
+    for value in (True, False):
+        graded = grade_case(case, _run(tool_calls=[_call("search_devices", {"supports_stylus": value}, 1)]))
+        assert graded["failures"] == [
+            {"type": "forbidden_call", "detail": "search_devices with supports_stylus"}
+        ]
+    assert grade_case(case, _run(tool_calls=[_call("search_devices", {"max_price": 3000}, 9)]))["result"] == "PASS"
+
+
+def test_forbidden_call_counts_even_if_a_later_call_is_correct():
+    case = _case(forbidden_calls=[{"name": "search_devices", "argument_names": ["max_price"]}])
+
+    graded = grade_case(case, _run(tool_calls=[
+        _call("search_devices", {"keyword": "Kindle Scribe", "max_price": 1500}, 0),
+        _call("search_devices", {"keyword": "Kindle Scribe"}, 3),
+    ]))
+
+    assert graded["result"] == "FAIL"
+
+
+def test_forbidden_calls_ignore_other_tools_and_failed_calls():
+    case = _case(forbidden_calls=[{"name": "search_devices", "argument_names": ["max_price"]}])
+
+    graded = grade_case(case, _run(tool_calls=[
+        _call("remember_preferences", {"max_price": 1500}, 1),
+        _call("search_devices", {"max_price": 1500}, 0, status="error"),
+    ]))
+
+    assert graded["result"] == "PASS"
+
+
+def test_memory_is_a_category():
+    assert "memory" in CATEGORIES

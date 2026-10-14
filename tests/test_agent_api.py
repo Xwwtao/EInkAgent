@@ -210,3 +210,114 @@ def test_runtime_refuses_an_index_built_with_another_embedding_model(monkeypatch
     with pytest.raises(ValueError, match="some-other-model"):
         api.get_agent_runtime()
     api._knowledge_searcher.cache_clear()
+
+
+# --- Sessions and memory (decision 009) ---
+
+from eink_agent.api import get_memory_store
+from eink_agent.memory import SUMMARY_BATCH_MESSAGES, SQLiteMemoryStore
+
+SESSION = "0b7f2a8e-3c1d-4e5f-9a6b-7c8d9e0f1a2b"
+
+
+@pytest.fixture
+def memory_store(tmp_path):
+    store = SQLiteMemoryStore(tmp_path / "memory.db")
+    app.dependency_overrides[get_memory_store] = lambda: store
+    yield store
+    app.dependency_overrides.pop(get_memory_store, None)
+
+
+def test_without_session_nothing_is_stored(fake_model, memory_store):
+    fake_model.chat.completions.create.return_value = _response(content="请问预算？")
+
+    body = CLIENT.post("/agent", json={"message": "推荐一款"}).json()
+
+    assert body["preferences"] is None
+    assert not memory_store.path.exists()
+    tools = fake_model.chat.completions.create.call_args.kwargs["tools"]
+    assert "remember_preferences" not in [tool["function"]["name"] for tool in tools]
+
+
+def test_session_stores_turns_and_preferences(fake_model, memory_store):
+    fake_model.chat.completions.create.side_effect = [
+        _response(tool_calls=[_tool_call("remember_preferences", {"max_price": 2000}, "c1")]),
+        _response(content="记住了，预算 2000 元以内。"),
+    ]
+
+    body = CLIENT.post("/agent", json={"message": "预算2000", "session_id": SESSION}).json()
+
+    assert body["preferences"] == {"max_price": 2000}
+    session = CLIENT.get(f"/sessions/{SESSION}").json()
+    assert session["messages"] == [
+        {"role": "user", "content": "预算2000"},
+        {"role": "assistant", "content": "记住了，预算 2000 元以内。"},
+    ]
+    assert session["preferences"] == {"max_price": 2000}
+    assert [item["value"] for item in session["preference_history"]] == [2000]
+
+
+def test_session_history_comes_from_the_server(fake_model, memory_store):
+    memory_store.add_messages(SESSION, [
+        {"role": "user", "content": "预算2000"}, {"role": "assistant", "content": "好的。"}
+    ])
+    fake_model.chat.completions.create.return_value = _response(content="找到了。")
+
+    CLIENT.post("/agent", json={"message": "推荐几款", "session_id": SESSION})
+
+    sent = fake_model.chat.completions.create.call_args.kwargs["messages"]
+    assert [m["content"] for m in sent[1:]] == ["预算2000", "好的。", "推荐几款"]
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"message": "x", "session_id": SESSION, "history": [{"role": "user", "content": "旧消息"}]},
+        {"message": "x", "session_id": "../../etc"},
+        {"message": "x", "session_id": ""},
+    ],
+)
+def test_session_requests_are_validated(fake_model, memory_store, payload):
+    assert CLIENT.post("/agent", json=payload).status_code == 422
+
+
+def test_broken_memory_store_does_not_break_the_answer(fake_model, tmp_path):
+    broken = tmp_path / "memory.db"
+    broken.write_text("not a database", encoding="utf-8")
+    app.dependency_overrides[get_memory_store] = lambda: SQLiteMemoryStore(broken)
+    fake_model.chat.completions.create.return_value = _response(content="请问预算？")
+
+    response = CLIENT.post("/agent", json={"message": "推荐一款", "session_id": SESSION})
+
+    assert response.status_code == 200
+    assert response.json()["answer"] == "请问预算？"
+    assert response.json()["preferences"] is None
+    assert CLIENT.get(f"/sessions/{SESSION}").status_code == 503
+
+
+def test_session_summary_runs_after_the_answer(fake_model, memory_store):
+    memory_store.add_messages(SESSION, [
+        {"role": "user" if i % 2 == 0 else "assistant", "content": f"消息{i}"}
+        for i in range(10 + SUMMARY_BATCH_MESSAGES - 2)
+    ])
+    fake_model.chat.completions.create.side_effect = [
+        _response(content="好的。"),
+        _response(content="用户在比较阅读器。"),
+    ]
+
+    CLIENT.post("/agent", json={"message": "继续", "session_id": SESSION})
+
+    assert memory_store.summary(SESSION) == ("用户在比较阅读器。", SUMMARY_BATCH_MESSAGES)
+
+
+def test_blocked_answer_is_not_stored_as_context(fake_model, memory_store):
+    # Same rule the page used before sessions: only completed turns become context.
+    fake_model.chat.completions.create.side_effect = [
+        _response(content="已为您下单。"),
+        _response(content="订单已提交。"),
+    ]
+
+    body = CLIENT.post("/agent", json={"message": "帮我下单", "session_id": SESSION}).json()
+
+    assert body["status"] == "blocked"
+    assert memory_store.messages(SESSION) == []

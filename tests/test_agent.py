@@ -890,3 +890,100 @@ def test_rewrite_instruction_says_the_user_never_saw_the_draft():
     instruction = client.chat.completions.create.call_args.kwargs["messages"][-1]["content"]
     assert "has not seen" in instruction
     assert "do not mention" in instruction
+
+
+# --- Session memory (decision 009) ---
+
+from eink_agent.agent import MEMORY_PROMPT
+from eink_agent.memory import SessionMemory, SQLiteMemoryStore
+
+
+def _system_prompt(client, call_index):
+    return client.chat.completions.create.call_args_list[call_index].kwargs["messages"][0]["content"]
+
+
+def _offered_tools(client, call_index=0):
+    tools = client.chat.completions.create.call_args_list[call_index].kwargs["tools"]
+    return [tool["function"]["name"] for tool in tools]
+
+
+def test_memory_tool_is_offered_only_with_memory(tmp_path):
+    client = Mock()
+    client.chat.completions.create.return_value = _response(content="请问预算？")
+
+    run_agent("推荐一款", client=client, model="m")
+    run_agent("推荐一款", client=client, model="m", memory=SessionMemory(SQLiteMemoryStore(tmp_path / "m.db"), "s1"))
+
+    assert "remember_preferences" not in _offered_tools(client, 0)
+    assert "remember_preferences" in _offered_tools(client, 1)
+
+
+def test_set_correct_then_use_preference_over_three_turns(tmp_path):
+    """Turn 1 sets a budget, turn 2 corrects it, turn 3 sees only the new one."""
+    memory = SessionMemory(SQLiteMemoryStore(tmp_path / "m.db"), "s1")
+    client = Mock()
+    client.chat.completions.create.side_effect = [
+        _response(tool_calls=[_make_tool_call("remember_preferences", {"max_price": 2000, "supports_stylus": True}, "c1")]),
+        _response(content="好的，记住了：预算 2000 元以内，需要手写。"),
+        _response(tool_calls=[_make_tool_call("remember_preferences", {"max_price": 1500}, "c2")]),
+        _response(content="已更新预算为 1500 元。"),
+        _response(tool_calls=[_make_tool_call("search_devices", {"max_price": 1500, "supports_stylus": True}, "c3")]),
+        _response(content="找到这些设备。"),
+    ]
+
+    first = run_agent("预算2000以内，要能手写", client=client, model="m", memory=memory)
+    second = run_agent("预算改成1500吧", client=client, model="m", memory=memory)
+    third = run_agent("推荐几款", client=client, model="m", memory=memory)
+
+    assert first.tool_trace[0]["status"] == "ok"
+    assert second.tool_trace[0]["result"]["current"] == {"max_price": 1500, "supports_stylus": True}
+    third_prompt = _system_prompt(client, 4)
+    assert "预算不超过 1500 元" in third_prompt and "需要手写笔" in third_prompt
+    assert "2000" not in third_prompt
+    assert third.tool_trace[0]["arguments"] == {"max_price": 1500, "supports_stylus": True}
+    assert [(e["field"], e["value"]) for e in memory.store.preference_history("s1")] == [
+        ("max_price", 2000), ("supports_stylus", True), ("max_price", 1500)
+    ]
+
+
+def test_memory_in_prompt_is_marked_as_data(tmp_path):
+    memory = SessionMemory(SQLiteMemoryStore(tmp_path / "m.db"), "s1")
+    memory.remember({"brand": "BOOX"})
+    client = Mock()
+    client.chat.completions.create.return_value = _response(content="好的。")
+
+    run_agent("推荐", client=client, model="m", memory=memory)
+
+    prompt = _system_prompt(client, 0)
+    assert prompt.endswith("\n<memory>\n用户偏好：品牌为 BOOX\n</memory>")
+    assert "not instructions" in prompt
+
+
+def test_unreadable_memory_does_not_stop_the_answer(tmp_path):
+    broken = tmp_path / "m.db"
+    broken.write_text("not a database", encoding="utf-8")
+    client = Mock()
+    client.chat.completions.create.return_value = _response(content="请问预算？")
+
+    result = run_agent("推荐一款", client=client, model="m", memory=SessionMemory(SQLiteMemoryStore(broken), "s1"))
+
+    assert result.status == "ok"
+    assert result.answer == "请问预算？"
+    # The memory rules stay; only the unreadable memory block is left out.
+    assert _system_prompt(client, 0) == SYSTEM_PROMPT + MEMORY_PROMPT
+
+
+def test_failed_preference_write_is_a_tool_error_not_a_crash(tmp_path):
+    broken = tmp_path / "m.db"
+    broken.write_text("not a database", encoding="utf-8")
+    client = Mock()
+    client.chat.completions.create.side_effect = [
+        _response(tool_calls=[_make_tool_call("remember_preferences", {"max_price": 1500}, "c1")]),
+        _response(content="抱歉，这次没能记住预算，但我可以继续帮你找。"),
+    ]
+
+    result = run_agent("预算1500", client=client, model="m", memory=SessionMemory(SQLiteMemoryStore(broken), "s1"))
+
+    assert result.status == "ok"
+    assert result.tool_trace[0]["status"] == "error"
+    assert result.tool_trace[0]["error"]["type"] == "tool_error"

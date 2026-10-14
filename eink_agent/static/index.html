@@ -129,6 +129,15 @@
   .sources a { color: var(--accent); text-decoration: none; }
   .sources a:hover { text-decoration: underline; }
   .muted { color: var(--ink-faint); font-size: 12px; }
+  .memory { border-bottom: 1px solid var(--rule); background: var(--card); font-size: 13px; }
+  .memory[hidden] { display: none; }
+  .memory-inner { max-width: 860px; margin: 0 auto; padding: 8px 16px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
+  .memory-label { color: var(--ink-faint); font-size: 12px; }
+  .memory .chip { background: var(--accent-soft); color: var(--accent); }
+  .memory details { flex-basis: 100%; color: var(--ink-faint); font-size: 12px; }
+  .memory summary { cursor: pointer; user-select: none; }
+  .memory ol { margin: 4px 0 2px; padding-left: 18px; }
+  .memory .withdrawn { text-decoration: line-through; }
   details.trace { font-size: 13px; color: var(--ink-soft); }
   details.trace summary { cursor: pointer; color: var(--ink-faint); list-style: none; user-select: none; }
   details.trace summary::-webkit-details-marker { display: none; }
@@ -191,6 +200,13 @@
     <button class="ghost" id="reset" type="button">新对话</button>
   </div>
 </header>
+<section class="memory" id="memory" hidden>
+  <div class="memory-inner">
+    <span class="memory-label">已记住：</span>
+    <span id="memory-chips"></span>
+    <details><summary>修改记录</summary><ol id="memory-history"></ol></details>
+  </div>
+</section>
 
 <main id="scroller">
   <div id="thread">
@@ -231,6 +247,24 @@
   const send = document.getElementById("send");
   let history = [];
   let busy = false;
+
+  // ---------- session ----------
+  // With a session id the server keeps the history, preferences and
+  // summary (docs/decisions/009). If the browser cannot store or create one,
+  // the page falls back to sending its own history, as before.
+  const SESSION_KEY = "einkagent.session";
+  function loadSessionId() {
+    try {
+      const saved = localStorage.getItem(SESSION_KEY);
+      if (saved) return saved;
+      const created = crypto.randomUUID();
+      localStorage.setItem(SESSION_KEY, created);
+      return created;
+    } catch (error) {
+      return null;
+    }
+  }
+  const sessionId = loadSessionId();
 
   // ---------- safe rendering ----------
   const escapeHtml = (text) => String(text)
@@ -363,6 +397,7 @@
     get_device_detail: "查看详情",
     compare_devices: "设备对比",
     search_knowledge: "知识检索",
+    remember_preferences: "记住偏好",
   };
 
   function renderTrace(body) {
@@ -382,6 +417,62 @@
       </li>`;
     }).join("");
     return `<details class="trace"><summary>Agent 调用过程：${calls.length} 次工具调用 · ${seconds} 秒 · ${escapeHtml(body.model)}</summary><ol class="steps">${steps}</ol></details>`;
+  }
+
+  // ---------- remembered preferences ----------
+  const CATEGORY_NAMES = { reader: "阅读器", note: "手写本", tablet: "墨水屏平板" };
+  function preferenceLabel(field, value) {
+    if (value === null) return { max_price: "预算", min_screen_size: "最小尺寸", max_screen_size: "最大尺寸",
+      max_weight_g: "重量", supports_stylus: "手写", is_color: "彩色/黑白", is_open_system: "系统",
+      category: "类型", brand: "品牌" }[field] + "（已取消）";
+    switch (field) {
+      case "max_price": return `预算 ≤ ¥${value}`;
+      case "min_screen_size": return `屏幕 ≥ ${value} 英寸`;
+      case "max_screen_size": return `屏幕 ≤ ${value} 英寸`;
+      case "max_weight_g": return `重量 ≤ ${value} g`;
+      case "supports_stylus": return value ? "需要手写" : "不需要手写";
+      case "is_color": return value ? "彩色屏" : "黑白屏";
+      case "is_open_system": return value ? "开放系统" : "封闭系统";
+      case "category": return CATEGORY_NAMES[value] || value;
+      case "brand": return `品牌 ${value}`;
+      default: return `${field}: ${value}`;
+    }
+  }
+
+  function renderPreferences(preferences, changes) {
+    const entries = Object.entries(preferences || {});
+    document.getElementById("memory").hidden = !entries.length && !(changes || []).length;
+    document.getElementById("memory-chips").innerHTML = entries.length
+      ? entries.map(([f, v]) => `<span class="chip">${escapeHtml(preferenceLabel(f, v))}</span>`).join(" ")
+      : `<span class="muted">暂无</span>`;
+    if (changes) {
+      document.getElementById("memory-history").innerHTML = changes.map((c) =>
+        `<li class="${c.value === null ? "withdrawn" : ""}">${escapeHtml(new Date(c.created_at).toLocaleString("zh-CN", { dateStyle: "short", timeStyle: "short" }))} · ${escapeHtml(preferenceLabel(c.field, c.value))}</li>`
+      ).join("");
+    }
+  }
+
+  async function refreshSession(restoreMessages) {
+    if (!sessionId) return;
+    try {
+      const response = await fetch(`/sessions/${sessionId}`);
+      if (!response.ok) return;
+      const session = await response.json();
+      renderPreferences(session.preferences, session.preference_history);
+      if (restoreMessages) {
+        // Tool calls are not stored, so restored answers show text only.
+        for (let i = 0; i + 1 < session.messages.length; i += 2) {
+          addUser(session.messages[i].content);
+          const el = document.createElement("div");
+          el.className = "msg";
+          el.innerHTML = `<div class="answer">${renderMarkdown(session.messages[i + 1].content)}</div>`;
+          thread.appendChild(el);
+        }
+        scrollToEnd();
+      }
+    } catch (error) {
+      // Memory is optional: the page works without it.
+    }
   }
 
   // ---------- conversation ----------
@@ -430,7 +521,9 @@
       const response = await fetch("/agent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, history: history.slice(-MAX_HISTORY) }),
+        body: JSON.stringify(sessionId
+          ? { message: text, session_id: sessionId }
+          : { message: text, history: history.slice(-MAX_HISTORY) }),
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -439,6 +532,7 @@
         return;
       }
       renderAnswer(slot, body);
+      if (sessionId) refreshSession(false);
       // Only completed turns become context for the next question.
       if (body.status === "ok") {
         history.push({ role: "user", content: text }, { role: "assistant", content: body.answer });
@@ -482,7 +576,11 @@
     if (button) ask(button.textContent);
   });
 
-  document.getElementById("reset").addEventListener("click", () => window.location.reload());
+  document.getElementById("reset").addEventListener("click", () => {
+    try { localStorage.removeItem(SESSION_KEY); } catch (error) { /* stateless fallback */ }
+    window.location.reload();
+  });
+  refreshSession(true);
   input.focus();
 })();
 </script>

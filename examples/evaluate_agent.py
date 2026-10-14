@@ -12,21 +12,26 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import tempfile
 import time
 from typing import Any
+import uuid
 
 import openai
 from openai import OpenAI
 
-from eink_agent.agent import SYSTEM_PROMPT, run_agent
+from eink_agent.agent import MAX_HISTORY_MESSAGES, SYSTEM_PROMPT, AgentResult, run_agent
 from eink_agent.agent_evaluation import grade_case, sum_usage, summarize
 from eink_agent.api import (
     DEEPSEEK_BASE_URL,
     DEFAULT_MODEL,
     MODEL_MAX_RETRIES,
     MODEL_TIMEOUT_SECONDS,
+    AgentRuntime,
     _knowledge_searcher,
+    answer_in_session,
 )
+from eink_agent.memory import SQLiteMemoryStore, update_summary
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 CASES_PATH = PROJECT_DIR / "evals" / "agent_cases.json"
@@ -84,16 +89,93 @@ def _result_docs(name: str, result: Any) -> list[str]:
     return list(dict.fromkeys(hit["chunk_id"].split("#")[0] for hit in result if isinstance(hit, dict)))
 
 
-def _run_case(case: dict[str, Any], client: Any, model: str, knowledge: Any = None) -> dict[str, Any]:
-    """Run one case; model errors are recorded instead of stopping the run."""
+def _tool_call_views(trace: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            "name": call["name"],
+            "arguments": call["arguments"],
+            "status": call["status"],
+            "error_type": call.get("error", {}).get("type") if call["status"] == "error" else None,
+            "result_count": call["result_count"],
+            "result_ids": _result_ids(call["result"]),
+            "result_docs": _result_docs(call["name"], call["result"]),
+            # Kept so the judge can grade later without rerunning the Agent.
+            "result": call["result"],
+        }
+        for call in trace
+    ]
+
+
+def _run_conversation(
+    case: dict[str, Any], client: Any, model: str, knowledge: Any, mode: str
+) -> tuple[AgentResult, list[dict[str, Any]], list[dict[str, Any]]]:
+    """Play the setup turns live, then the graded input (decision 009).
+
+    ``memory``: each case gets a fresh temporary store and goes through
+    answer_in_session, the code path of POST /agent with a session, plus the
+    summary step that runs after each answer. ``window``: no memory, only
+    the latest MAX_HISTORY_MESSAGES of the replayed conversation.
+    Returns the final result, the setup turns and every model call.
+    """
+    setup: list[dict[str, Any]] = []
+    model_calls: list[dict[str, Any]] = []
+
+    def record(text: str, result: AgentResult) -> None:
+        setup.append({
+            "input": text,
+            "status": result.status,
+            "answer": result.answer,
+            "tool_calls": [
+                {key: call[key] for key in ("name", "arguments", "status", "result_count")}
+                for call in _tool_call_views(result.tool_trace)
+            ],
+        })
+        model_calls.extend(result.model_calls)
+
+    if mode == "window":
+        history: list[dict[str, str]] = []
+        for text in case["setup_turns"]:
+            result = run_agent(text, client=client, model=model, history=history, knowledge=knowledge)
+            record(text, result)
+            if result.status == "ok":
+                history += [{"role": "user", "content": text}, {"role": "assistant", "content": result.answer}]
+        final = run_agent(case["input"], client=client, model=model, history=history, knowledge=knowledge)
+        return final, setup, model_calls + final.model_calls
+
+    runtime = AgentRuntime(client=client, model=model, knowledge=knowledge)
+    session_id = str(uuid.uuid4())
+    with tempfile.TemporaryDirectory() as directory:
+        store = SQLiteMemoryStore(Path(directory) / "memory.db")
+        for text in case["setup_turns"]:
+            result, _ = answer_in_session(text, runtime=runtime, store=store, session_id=session_id)
+            record(text, result)
+            summary = update_summary(store, session_id, client=client, model=model, window=MAX_HISTORY_MESSAGES)
+            if summary["model_call"]:
+                model_calls.append(summary["model_call"])
+        final, _ = answer_in_session(case["input"], runtime=runtime, store=store, session_id=session_id)
+    return final, setup, model_calls + final.model_calls
+
+
+def _run_case(
+    case: dict[str, Any], client: Any, model: str, knowledge: Any = None, mode: str = "memory"
+) -> dict[str, Any]:
+    """Run one case; model errors are recorded instead of stopping the run.
+
+    Cases with ``setup_turns`` are conversations, run in the given ``mode``.
+    """
     started = time.perf_counter()
+    setup: list[dict[str, Any]] = []
     try:
         if knowledge is not None and case.get("knowledge_extra_docs"):
             # Evaluation-only documents, e.g. one hiding an instruction.
             knowledge = knowledge.with_extra_documents(case["knowledge_extra_docs"])
-        result = run_agent(
-            case["input"], client=client, model=model, history=case["history"], knowledge=knowledge
-        )
+        if "setup_turns" in case:
+            result, setup, model_calls = _run_conversation(case, client, model, knowledge, mode)
+        else:
+            result = run_agent(
+                case["input"], client=client, model=model, history=case["history"], knowledge=knowledge
+            )
+            model_calls = result.model_calls
     except tuple(CONFIGURATION_ERRORS) as error:
         message = next(text for kind, text in CONFIGURATION_ERRORS.items() if isinstance(error, kind))
         raise EvaluationAborted(f"{message}；本次不生成报告。") from error
@@ -106,30 +188,19 @@ def _run_case(case: dict[str, Any], client: Any, model: str, knowledge: Any = No
             "status": "exception",
             "tool_calls": [],
             "rewrites": [],
+            "setup_turns": setup,
         }
 
-    tool_calls = [
-        {
-            "name": call["name"],
-            "arguments": call["arguments"],
-            "status": call["status"],
-            "error_type": call.get("error", {}).get("type") if call["status"] == "error" else None,
-            "result_count": call["result_count"],
-            "result_ids": _result_ids(call["result"]),
-            "result_docs": _result_docs(call["name"], call["result"]),
-            # Kept so the judge can grade later without rerunning the Agent.
-            "result": call["result"],
-        }
-        for call in result.tool_trace
-    ]
+    tool_calls = _tool_call_views(result.tool_trace)
     return {
         "run": {"answer": result.answer, "status": result.status, "tool_calls": tool_calls},
         "latency_ms": round((time.perf_counter() - started) * 1000),
-        "usage": sum_usage(result.model_calls),
+        "usage": sum_usage(model_calls),
         "answer": result.answer,
         "status": result.status,
         "tool_calls": tool_calls,
         "rewrites": result.rewrites,
+        "setup_turns": setup,
     }
 
 
@@ -182,7 +253,71 @@ def _markdown(report: dict[str, Any]) -> str:
         lines.append(
             f"| {result['id']} | {result['category']} | {result['result']} | {calls} | {result['latency_ms']} | {reasons} |"
         )
+    comparison = summary.get("memory_comparison")
+    if comparison:
+        window = {result["id"]: result for result in report["window_results"]}
+        lines += [
+            "",
+            "## 记忆对比",
+            "",
+            "同一段对话跑两遍：有记忆（会话存储 + 偏好 + 摘要）与只有最近 "
+            f"{MAX_HISTORY_MESSAGES} 条消息。只评最后一轮。",
+            "",
+            f"- 有记忆：{comparison['memory_passed']} / {comparison['cases']}；"
+            f"只有窗口：{comparison['window_passed']} / {comparison['cases']}；"
+            f"前几轮调用了 remember_preferences：{comparison['preference_writes']} / {comparison['cases']}",
+            "",
+            "| 用例 | 有记忆 | 只有窗口 | 写入偏好 |",
+            "| --- | --- | --- | --- |",
+            *[
+                f"| {result['id']} | {result['result']} | {window[result['id']]['result']} | "
+                f"{'是' if _wrote_preferences(result) else '否'} |"
+                for result in report["results"]
+                if result["id"] in window
+            ],
+        ]
     return "\n".join(lines) + "\n"
+
+
+def _graded(case: dict[str, Any], outcome: dict[str, Any]) -> dict[str, Any]:
+    grade = grade_case(case, outcome["run"])
+    return {
+        "id": case["id"],
+        "category": case["category"],
+        "input": case["input"],
+        "history": case["history"],
+        "setup_turns": outcome["setup_turns"],
+        "result": grade["result"],
+        "failures": grade["failures"],
+        "status": outcome["status"],
+        "answer": outcome["answer"],
+        "tool_calls": outcome["tool_calls"],
+        "rewrites": outcome["rewrites"],
+        "latency_ms": outcome["latency_ms"],
+        "usage": outcome["usage"],
+    }
+
+
+def _wrote_preferences(result: dict[str, Any]) -> bool:
+    return any(
+        call["name"] == "remember_preferences" and call["status"] == "ok"
+        for turn in result["setup_turns"]
+        for call in turn["tool_calls"]
+    )
+
+
+def _memory_comparison(results: list[dict[str, Any]], window_results: list[dict[str, Any]]) -> dict[str, int] | None:
+    """Pass counts with memory and with the window only, for the same cases."""
+    if not window_results:
+        return None
+    ids = {result["id"] for result in window_results}
+    memory_results = [result for result in results if result["id"] in ids]
+    return {
+        "cases": len(window_results),
+        "memory_passed": sum(result["result"] == "PASS" for result in memory_results),
+        "window_passed": sum(result["result"] == "PASS" for result in window_results),
+        "preference_writes": sum(_wrote_preferences(result) for result in memory_results),
+    }
 
 
 def run_evaluation(
@@ -199,26 +334,18 @@ def run_evaluation(
     started_at = datetime.now(timezone.utc)
     results = []
 
+    window_results = []
+
     for case in cases:
-        outcome = _run_case(case, client, model, knowledge)
-        grade = grade_case(case, outcome["run"])
-        results.append(
-            {
-                "id": case["id"],
-                "category": case["category"],
-                "input": case["input"],
-                "history": case["history"],
-                "result": grade["result"],
-                "failures": grade["failures"],
-                "status": outcome["status"],
-                "answer": outcome["answer"],
-                "tool_calls": outcome["tool_calls"],
-                "rewrites": outcome["rewrites"],
-                "latency_ms": outcome["latency_ms"],
-                "usage": outcome["usage"],
-            }
-        )
-        print(f"{case['id']}: {grade['result']} " + " ".join(f["type"] for f in grade["failures"]))
+        results.append(_graded(case, _run_case(case, client, model, knowledge)))
+        print(f"{case['id']}: {results[-1]['result']} " + " ".join(f["type"] for f in results[-1]["failures"]))
+        if "setup_turns" in case:
+            # The control: same conversation, only the recent-message window.
+            window_results.append(_graded(case, _run_case(case, client, model, knowledge, mode="window")))
+            print(f"{case['id']} (仅窗口): {window_results[-1]['result']}")
+
+    summary = summarize(results, pricing)
+    summary["memory_comparison"] = _memory_comparison(results, window_results)
 
     report = {
         "run": {
@@ -233,8 +360,9 @@ def run_evaluation(
             "pricing": pricing,
             "knowledge": knowledge is not None,
         },
-        "summary": summarize(results, pricing),
+        "summary": summary,
         "results": results,
+        "window_results": window_results,
     }
 
     report_dir.mkdir(parents=True, exist_ok=True)

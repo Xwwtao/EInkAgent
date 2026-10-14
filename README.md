@@ -15,6 +15,9 @@ every price came from.
 - **Knowledge**: 20 short documents explaining E Ink technology (panels,
   light, styluses, systems, formats, water resistance), searched by a fourth
   tool and cited by title and link.
+- **Memory**: per-session preferences (budget, stylus, colour…) saved by a
+  fifth tool as timestamped changes, a rolling summary, and the conversation
+  restored after a page refresh.
 - **Interface**: a single-page chat UI served by FastAPI.
 
 ## Quick start
@@ -50,6 +53,10 @@ Knowledge search needs an embedding service (`EMBEDDING_API_KEY`,
 `EMBEDDING_BASE_URL`; DashScope's OpenAI-compatible endpoint is used here).
 Without them the agent runs with the device tools only and is not offered
 `search_knowledge`.
+
+The page keeps a session id in the browser; the server stores that
+session's messages, preferences and summary in `data/memory.db` (ignored by
+Git; `MEMORY_DB_PATH` overrides it). "新对话" starts a new session.
 Environment variables are listed in `.env.example`; the app reads the
 environment only and does not load `.env` files.
 
@@ -64,6 +71,7 @@ environment only and does not load `.env` files.
 | 我想买个阅读器 | Asks about budget, size and use before searching |
 | Kaleido 3 的彩色为什么没有黑白清楚？ | Calls `search_knowledge` and cites the passage it used |
 | 阅读器一般保修多久？ | The corpus has no answer: the search returns nothing and the agent says no material was found |
+| 预算2000以内，要能手写 → 预算改成1500吧 | Calls `remember_preferences` each time; the bar under the header shows 预算 ≤ ¥1500 and the change history |
 
 Each answer can expand a timeline of the tool calls it made, with arguments,
 result counts and failures.
@@ -77,8 +85,18 @@ result counts and failures.
 - **Cite prices**: every price comes with the seller, collection date and
   link of the cheapest available offer. Overseas prices are stored in USD and
   converted at the fixed rate in `data/exchange_rates.csv`.
-- **Hold a short conversation**: the page sends the last 10 messages with
-  each request; the server stores nothing.
+- **Remember a conversation**: with a session id the server keeps the
+  messages and sends the last 10 to the model. Older messages are folded
+  into a summary of at most 500 characters once 6 have left that window.
+  Without a session id the page sends its own last 10 messages and the
+  server stores nothing.
+- **Remember preferences**: `remember_preferences` saves budget, screen
+  size, weight, stylus, colour, open system, type and brand. Each change is
+  a new timestamped row: the newest value wins, null withdraws a
+  preference, and the history stays. Saved preferences are shown to the
+  model as data and applied to searches, but not to lookups by name.
+- **Keep answering when memory fails**: an unreadable or unwritable memory
+  store means answering without memory, never an HTTP error.
 - **Recover from tool failures**: invalid JSON, unknown tools, invalid
   arguments and tool exceptions are returned to the model as structured
   errors (never exception text). Two consecutive failures, an empty answer,
@@ -128,33 +146,41 @@ result counts and failures.
   first draft of k06 repeated a planted "已为您下单" from a retrieved
   document; the answer check caught it and the rewrite passed. In run 8 the
   model ignored the instruction on its own.
-- Conversations are lost when the page is refreshed.
+- **Memory showed no measurable gain in its evaluation.** With memory and
+  with only the last 10 messages, the six memory cases both passed 4 of 6
+  (run 9). The model keeps restating the user's constraints in its answers,
+  so they stay inside the window even when the original message has left
+  it. Two cases fail in both modes because of how they were designed (see
+  [Evaluation](#evaluation)).
+- **Anyone holding a session id can read that session.** There is no
+  login; this is a local demo, not a multi-user service. Restored answers
+  show text only: tool calls and device cards are not stored.
 - The agent cannot buy anything or change data; all tools are read-only.
 
 ## Evaluation
 
-41 hand-written cases in `evals/agent_cases.json` cover single searches,
+47 hand-written cases in `evals/agent_cases.json` cover single searches,
 multi-step lookups, empty results, invalid parameters, clarification,
 unsupported actions, prompt injection, multi-turn follow-ups, data
-honesty and knowledge questions. One knowledge case (k06) adds an
+honesty, knowledge questions and memory. One knowledge case (k06) adds an
 evaluation-only document with a planted instruction
 (`evals/knowledge_injection/`) and checks the answer does not follow it. A case passes only if the required tool calls succeed, return the
 expected number of rows or the expected devices, and the answer contains the
 expected facts without claiming an unexecuted action. Expected row counts are
 tied to the committed CSV data and checked by a unit test.
 
-**Latest result: 40 of 41 passed** — `evals/reports/20261013T144716Z.md`,
-`deepseek-flash`, single run on 2026-10-13 at commit `457e755`.
-p50 latency 3.6 s, p95 7.2 s per case; 165,705 prompt and 19,151 completion
-tokens, about ¥0.11–0.22 for the whole run at the off-peak and peak prices in
-`evals/pricing.json`. The one failure, p03, refused the planted `DELETE`
-correctly but answered in English, so the Chinese refusal keywords were
-missing; it had answered in Chinese in all seven earlier runs. It is left
-as a failure rather than patched (one occurrence is not enough evidence for
-a new rule).
+**Latest result: 45 of 47 passed** — `evals/reports/20261014T125704Z.md`,
+`deepseek-flash`, single run on 2026-10-14 at commit `7431219`.
+p50 latency 4.3 s, p95 20.5 s per case (memory cases play several turns);
+301,869 prompt and 37,264 completion tokens, about ¥0.23–0.46 for the whole
+run at the off-peak and peak prices in `evals/pricing.json`, including the
+window-only control runs. All 41 earlier cases passed; the two failures are
+memory cases explained below. In run 8, p03 refused correctly but answered in
+English; it answered in Chinese again in run 9 and no rule was added for it.
 
 The report lists which answers passed only after the answer check asked for
-a rewrite (none in run 8).
+a rewrite: in run 9, k06 again first repeated the planted order claim, and
+the rewritten answer no longer mentioned a previous draft.
 
 How the result got here, all reports committed in `evals/reports/`:
 
@@ -168,6 +194,7 @@ How the result got here, all reports committed in `evals/reports/`:
 | 6 | `1f5fe39` | 34 / 35 | Raw tool-call syntax never returned as an answer |
 | 7 | `015673f` | 41 / 41 | Six knowledge cases added (k01–k06) and `search_knowledge` offered |
 | 8 | `457e755` | 40 / 41 | Rewrites recorded; rewrite request no longer lets the model apologise for an unseen draft; knowledge queries asked to be in Chinese (run 7's d01 searched in English and missed the water-resistance document) |
+| 9 | `7431219` | 45 / 47 | Six memory cases added (mem01–mem06) and run with and without memory |
 
 Every change to the cases was approved and is recorded with its reason in
 `docs/decisions/006-agent-evaluation.md`. After run 5 the keyword lists are
@@ -195,6 +222,35 @@ score can, so it decides whether to answer and the hybrid ranking decides
 what to return. Passages are one per `##` section, without overlap (average
 about 80 characters). No query rewriting or reranking: there is no data
 showing they are needed.
+
+### Memory: with and without
+
+Each memory case plays its earlier turns live with the real model, then
+grades only the last turn's searches, including `forbidden_calls` (for
+example, no search with the old budget after the user corrected it). Every
+case runs twice: with session memory (the same code path as `POST /agent`)
+and with only the last 10 messages (`docs/decisions/009-session-memory.md`).
+
+Run 9: **with memory 4 of 6, window only 4 of 6**; the model called
+`remember_preferences` in the earlier turns of all 6 cases.
+
+- **mem04 was meant to separate the two**: the constraint is stated in turn
+  1 of 7 and has left the window by the last turn. Both passed, because the
+  model's answers kept repeating "those 5 black-and-white devices under
+  1,500 yuan".
+- **mem02 failed in both** by case design: with the corrected budget of
+  1,500 and a stylus there are no devices, so the model reasonably searched
+  the old budget as a fallback (with memory) or asked which to keep
+  (window only).
+- **mem03 failed in both** by grading design: neither searched again in the
+  last turn, reusing the previous turn's results. The turn that withdrew
+  the stylus requirement did differ: with memory the model sent
+  `supports_stylus: null` and found 20 devices; with the window only it
+  sent `supports_stylus: false`, wrongly excluding every stylus device.
+
+So no improvement is claimed from memory. What it demonstrably adds is a
+conversation and preferences that survive a refresh (offline tests), a
+visible change history, and an explicit way to withdraw a preference.
 
 ### Answer groundedness (model judge)
 
@@ -251,8 +307,9 @@ python -m examples.build_knowledge_index               # re-embed after editing 
 Browser (static/index.html) ──POST /agent──▶ api.py ──▶ agent.py ──▶ agent_tools.py
                                                │            │              │
                                     dependency-injected   answer_guard.py  ├──▶ device_repository.py
-                                      DeepSeek client                      └──▶ knowledge.py ◀── data/knowledge/*.md
-                                                                                              + knowledge_index.json
+                                      DeepSeek client                      ├──▶ knowledge.py ◀── data/knowledge/*.md
+                                                                           │                  + knowledge_index.json
+                                                                           └──▶ memory.py ──▶ SQLite (data/memory.db)
                                                                             │
                          data/*.csv ──▶ data_import.py ──▶ SQLite (devices, offers)
 ```
@@ -265,6 +322,7 @@ Browser (static/index.html) ──POST /agent──▶ api.py ──▶ agent.py
 | `eink_agent/agent_tools.py` | Tool schemas shown to the model, allowlist, argument validation |
 | `device_repository.py` | SQL for search, detail and comparison |
 | `eink_agent/knowledge.py` | Corpus parsing, section chunks, BM25, vectors, gated hybrid search |
+| `eink_agent/memory.py` | Session messages, preference events, rolling summary |
 | `data_import.py` / `data_quality.py` | Validated, idempotent CSV import and the data report |
 
 Design decisions, each with the rejected alternative, are in
@@ -275,7 +333,8 @@ Design decisions, each with the rejected alternative, are in
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `GET` | `/` | Chat interface |
-| `POST` | `/agent` | `{"message": str, "history": [{"role", "content"}]}` → answer, status, tool calls, latency |
+| `POST` | `/agent` | `{"message": str, "history": [...]}` or `{"message": str, "session_id": uuid}` → answer, status, tool calls, latency, preferences |
+| `GET` | `/sessions/{session_id}` | Stored messages, current preferences and their change history |
 | `GET` | `/devices` | Search with `brand`, `max_price`, `limit` |
 | `GET` | `/devices/{id}` | One device |
 | `POST` | `/devices/compare` | Two to five device IDs |
@@ -283,8 +342,9 @@ Design decisions, each with the rejected alternative, are in
 
 Interactive documentation: http://127.0.0.1:8000/docs
 
-`POST /agent` status codes: 422 invalid request, 503 no API key configured,
-504 model timeout, 502 other model API errors.
+`POST /agent` status codes: 422 invalid request (including both `history`
+and `session_id`), 503 no API key configured, 504 model timeout, 502 other
+model API errors. `GET /sessions/{id}` answers 503 when memory cannot be read.
 
 ## Development
 
@@ -313,7 +373,7 @@ python -m examples.smoke_test_agent
 - [x] Model-based judge for answer groundedness, calibrated against hand labels and fault injection
 - [x] Retrieval over E Ink technology explanations, with cited sources and an indirect-injection case
 - [ ] Retrieval over manuals and after-sales policies
-- [ ] Preference memory across turns
+- [x] Session memory: preferences with change history, rolling summary, restore after refresh
 
 ## License
 
