@@ -184,8 +184,12 @@ def _describe_validation_error(error: ValidationError) -> str:
     return "; ".join(problems)
 
 
-def _execute(name: str, arguments: dict[str, Any], knowledge: Any = None, memory: Any = None) -> Any:
-    """Run one tool, converting every failure into a ToolCallError."""
+def run_tool(name: str, arguments: dict[str, Any], knowledge: Any = None, memory: Any = None) -> Any:
+    """Run one tool, converting every failure into a ToolCallError.
+
+    Shared by the Agent loop and the MCP server (decision 010), so both
+    report the same error types and never pass exception text on.
+    """
     try:
         return execute_tool(name, arguments, knowledge=knowledge, memory=memory)
     except UnknownToolError as error:
@@ -254,7 +258,7 @@ def _run_tool_call(
     try:
         arguments = _parse_arguments(name, tool_call.function.arguments)
         entry["arguments"] = arguments
-        result = _execute(name, arguments, knowledge, memory)
+        result = run_tool(name, arguments, knowledge, memory)
     except ToolCallError as error:
         entry.update(
             status="error",
