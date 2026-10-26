@@ -15,7 +15,9 @@ to a committed evaluation report.
   and collection date (`data/data_quality_report.md`).
 - **Agent**: DeepSeek tool calling, a hand-written loop over five tools —
   three read-only device tools, knowledge search and preference memory.
-- **Interface**: a single-page chat UI served by FastAPI.
+- **Interface**: a single-page chat UI served by FastAPI, and the same device
+  and knowledge tools as an MCP server for Claude Desktop or Claude Code, with
+  a matching Skill.
 
 ## Architecture
 
@@ -38,6 +40,8 @@ data/*.csv ──▶ data_import.py ──▶ SQLite (devices, offers)
 | `device_repository.py` | SQL for search, detail and comparison |
 | `eink_agent/knowledge.py` | Corpus parsing, section chunks, BM25, vectors, gated hybrid search |
 | `eink_agent/memory.py` | Session messages, preference events, rolling summary |
+| `eink_agent/mcp_server.py` | The Agent's tools over MCP (stdio), sharing schemas, validation and errors |
+| `skills/eink-shopping/SKILL.md` | How a Claude client should use those tools |
 | `data_import.py` / `data_quality.py` | Validated, idempotent CSV import and the data report |
 
 Design decisions, each with the rejected alternative, are in
@@ -91,6 +95,44 @@ only and does not load `.env` files.
 
 Each answer can expand a timeline of the tool calls it made, with arguments,
 result counts and failures.
+
+## Use the tools from Claude (MCP)
+
+`python -m eink_agent.mcp_server` serves `search_devices`,
+`get_device_detail` and `compare_devices` over MCP (stdio), plus
+`search_knowledge` when the `EMBEDDING_*` variables are set. The tool list,
+argument schemas, validation and structured errors are the ones the Agent
+uses (`docs/decisions/010-mcp-server-and-skill.md`); every tool is marked
+read-only, and the memory tool is not exposed.
+
+Claude Code (replace the path with your clone):
+
+```bash
+claude mcp add eink -e PYTHONPATH=/path/to/EInkAgent -- /path/to/EInkAgent/.venv/bin/python -m eink_agent.mcp_server
+```
+
+Claude Desktop (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "eink": {
+      "command": "/path/to/EInkAgent/.venv/bin/python",
+      "args": ["-m", "eink_agent.mcp_server"],
+      "env": { "PYTHONPATH": "/path/to/EInkAgent" }
+    }
+  }
+}
+```
+
+Add `EMBEDDING_API_KEY` and `EMBEDDING_BASE_URL` to `env` to enable
+knowledge search. `skills/eink-shopping/` is an Agent Skill with the rules
+this project's prompt follows (ask before searching without constraints,
+unknown fields stay unknown, prices with seller and date, no budget on name
+lookups); copy it to `.claude/skills/` (Claude Code) or upload it as a skill
+in Claude's settings. The tools never order or change anything, but a Claude
+client is not covered by this project's answer checks, and this pairing has
+not been evaluated.
 
 ## Capabilities and limitations
 
@@ -196,6 +238,7 @@ other model errors. Interactive documentation: http://127.0.0.1:8000/docs.
 - [ ] Repeated evaluation runs with variation ranges instead of single runs
 - [ ] Memory cases that grade the turn where a preference is withdrawn
 - [ ] Retrieval over manuals and after-sales policies
+- [x] MCP server for the device and knowledge tools, with a matching Agent Skill
 - [ ] Scheduled data refresh
 
 ## License
